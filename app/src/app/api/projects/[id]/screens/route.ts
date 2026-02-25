@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceSupabase } from '@/lib/supabase/server';
-import { getSession, isAdmin } from '@/lib/auth';
+import { requireAdminWithSupabase, parseJsonBody } from '@/lib/api-helpers';
+import { validateUUID, sanitizeText } from '@/lib/validation';
 
 // POST /api/projects/[id]/screens — create screen
 export async function POST(
@@ -8,17 +8,21 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: projectId } = await params;
-  const session = await getSession();
-  if (!session || !isAdmin(session)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const uuidErr = validateUUID(projectId, 'Project ID');
+  if (uuidErr) return uuidErr;
 
-  const { name } = await request.json();
+  const auth = await requireAdminWithSupabase();
+  if (auth.error) return auth.error;
+
+  const parsed = await parseJsonBody<{ name?: string }>(request);
+  if (parsed.error) return parsed.error;
+  // SECURITY: Sanitize screen name to prevent stored XSS
+  const name = parsed.body.name ? sanitizeText(parsed.body.name, 255) : '';
   if (!name) {
     return NextResponse.json({ error: 'Screen name is required' }, { status: 400 });
   }
 
-  const supabase = await createServiceSupabase();
+  const { supabase } = auth;
 
   const { data, error } = await supabase
     .from('screens')
@@ -26,6 +30,9 @@ export async function POST(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[screens/POST]', error.message);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
   return NextResponse.json(data, { status: 201 });
 }

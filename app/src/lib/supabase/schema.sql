@@ -1,175 +1,184 @@
 -- ReviewBoard Database Schema for Supabase
--- Updated: cascade delete fix, unique constraints, indexes, RLS, storage
+-- Reference file — reflects the final schema after all migrations.
+-- Updated: 2026-02-25 — removed client_accounts.project_id,
+--          added NOT NULL timestamps, pg_trgm text search, audit constraints.
 
--- Enable UUID generation
-create extension if not exists "uuid-ossp";
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ============================================
 -- PROJECTS
 -- ============================================
-create table projects (
-  id uuid primary key default uuid_generate_v4(),
-  name text not null check (char_length(name) <= 255),
+CREATE TABLE projects (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name text NOT NULL CHECK (char_length(name) <= 255),
   slack_channel text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- ============================================
--- CLIENT ACCOUNTS (auto-provisioned per project)
--- Changed: project_id uses SET NULL instead of CASCADE to prevent
--- deleting a project from nuking client accounts that have access
--- to other projects.
+-- CLIENT ACCOUNTS
+-- NOTE: project_id column was removed in migration 000007.
+-- All project associations go through client_account_projects.
 -- ============================================
-create table client_accounts (
-  id uuid primary key default uuid_generate_v4(),
-  project_id uuid references projects(id) on delete set null,
-  login_id text unique not null,
-  password text not null default 'Potential',
-  created_at timestamptz default now()
+CREATE TABLE client_accounts (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  login_id text UNIQUE NOT NULL,
+  -- SECURITY: No default password. Accounts must be provisioned with a bcrypt hash.
+  password text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- Many-to-many: one client_account can access multiple projects
-create table client_account_projects (
-  client_account_id uuid references client_accounts(id) on delete cascade,
-  project_id uuid references projects(id) on delete cascade,
-  created_at timestamptz default now(),
-  primary key (client_account_id, project_id)
+CREATE TABLE client_account_projects (
+  client_account_id uuid REFERENCES client_accounts(id) ON DELETE CASCADE,
+  project_id uuid REFERENCES projects(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (client_account_id, project_id)
 );
 
 -- ============================================
 -- SCREENS (within a project)
 -- ============================================
-create table screens (
-  id uuid primary key default uuid_generate_v4(),
-  project_id uuid references projects(id) on delete cascade not null,
-  name text not null check (char_length(name) <= 255),
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+CREATE TABLE screens (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id uuid REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
+  name text NOT NULL CHECK (char_length(name) <= 255),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- ============================================
 -- SCREENSHOT VERSIONS (per screen)
 -- ============================================
-create table screenshot_versions (
-  id uuid primary key default uuid_generate_v4(),
-  screen_id uuid references screens(id) on delete cascade not null,
-  version integer not null default 1,
-  image_url text not null,
-  created_at timestamptz default now(),
-  unique(screen_id, version)
+CREATE TABLE screenshot_versions (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  screen_id uuid REFERENCES screens(id) ON DELETE CASCADE NOT NULL,
+  version integer NOT NULL DEFAULT 1,
+  image_url text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(screen_id, version)
 );
 
 -- ============================================
 -- COMMENTS (pin feedback on a screenshot version)
--- Added: unique constraint on (screenshot_version_id, pin_number)
--- Added: coordinate range check
 -- ============================================
-create table comments (
-  id uuid primary key default uuid_generate_v4(),
-  screenshot_version_id uuid references screenshot_versions(id) on delete cascade not null,
-  pin_number integer not null,
-  x float not null check (x >= 0 and x <= 100),
-  y float not null check (y >= 0 and y <= 100),
-  text text not null check (char_length(text) <= 5000),
-  author_id text not null,
-  status text not null default 'open' check (status in ('open', 'in-progress', 'resolved')),
-  created_at timestamptz default now(),
-  updated_at timestamptz default now(),
-  unique(screenshot_version_id, pin_number)
+CREATE TABLE comments (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  screenshot_version_id uuid REFERENCES screenshot_versions(id) ON DELETE CASCADE NOT NULL,
+  pin_number integer NOT NULL,
+  x float NOT NULL CHECK (x >= 0 AND x <= 100),
+  y float NOT NULL CHECK (y >= 0 AND y <= 100),
+  text text NOT NULL CHECK (char_length(text) <= 5000),
+  author_id text NOT NULL,
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in-progress', 'resolved')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(screenshot_version_id, pin_number)
 );
 
 -- ============================================
 -- REPLIES (admin/client replies on a comment)
--- Added: author_id to identify who replied
 -- ============================================
-create table replies (
-  id uuid primary key default uuid_generate_v4(),
-  comment_id uuid references comments(id) on delete cascade not null,
-  text text not null check (char_length(text) <= 5000),
-  author_type text not null check (author_type in ('admin', 'client')),
-  author_id text not null default '',
-  created_at timestamptz default now()
+CREATE TABLE replies (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  comment_id uuid REFERENCES comments(id) ON DELETE CASCADE NOT NULL,
+  text text NOT NULL CHECK (char_length(text) <= 5000),
+  author_type text NOT NULL CHECK (author_type IN ('admin', 'client')),
+  author_id text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- ============================================
 -- AUDIT LOG
 -- ============================================
-create table audit_log (
-  id uuid primary key default uuid_generate_v4(),
-  entity_type text not null,
-  entity_id uuid not null,
-  action text not null,
+CREATE TABLE audit_log (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  entity_type text NOT NULL CHECK (entity_type IN ('comment', 'project', 'screen', 'client_account', 'reply', 'screenshot_version')),
+  entity_id uuid NOT NULL,
+  action text NOT NULL CHECK (action IN ('create', 'edit', 'delete', 'status_change')),
   old_value text,
   new_value text,
-  actor text not null,
-  created_at timestamptz default now()
+  actor text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- ============================================
 -- INDEXES
 -- ============================================
-create index idx_client_accounts_login_id on client_accounts(login_id);
-create index idx_client_accounts_project_id on client_accounts(project_id);
-create index idx_client_account_projects_project on client_account_projects(project_id);
-create index idx_screens_project_id on screens(project_id);
-create index idx_screenshot_versions_screen_id on screenshot_versions(screen_id);
-create index idx_comments_screenshot_version_id on comments(screenshot_version_id);
-create index idx_comments_status on comments(status);
-create index idx_comments_sv_status on comments(screenshot_version_id, status);
-create index idx_comments_created_at on comments(created_at);
-create index idx_replies_comment_id on replies(comment_id);
-create index idx_audit_log_entity on audit_log(entity_type, entity_id);
+-- Primary query-path indexes
+CREATE INDEX idx_client_accounts_login_id ON client_accounts(login_id);
+CREATE INDEX idx_client_account_projects_project ON client_account_projects(project_id);
+CREATE INDEX idx_screens_project_id ON screens(project_id);
+CREATE INDEX idx_screenshot_versions_screen_id ON screenshot_versions(screen_id);
+CREATE INDEX idx_comments_screenshot_version_id ON comments(screenshot_version_id);
+CREATE INDEX idx_comments_status ON comments(status);
+CREATE INDEX idx_comments_sv_status ON comments(screenshot_version_id, status);
+CREATE INDEX idx_comments_created_at ON comments(created_at);
+CREATE INDEX idx_replies_comment_id ON replies(comment_id);
+CREATE INDEX idx_audit_log_entity ON audit_log(entity_type, entity_id);
+
+-- Added in migration 000006
+CREATE INDEX idx_audit_log_created_at ON audit_log(created_at DESC);
+CREATE INDEX idx_audit_log_actor ON audit_log(actor);
+CREATE INDEX idx_comments_author_id ON comments(author_id);
+CREATE INDEX idx_replies_author_id ON replies(author_id);
+CREATE INDEX idx_replies_created_at ON replies(created_at);
+CREATE INDEX idx_screenshot_versions_version_desc ON screenshot_versions(screen_id, version DESC);
+
+-- Added in optimization migration
+CREATE INDEX idx_comments_text_trgm ON comments USING gin (text gin_trgm_ops);
+CREATE INDEX idx_comments_status_created_at ON comments(status, created_at DESC);
+CREATE INDEX idx_comments_open ON comments(screenshot_version_id) WHERE status = 'open';
+CREATE INDEX idx_audit_log_action ON audit_log(action);
 
 -- ============================================
--- RLS (Row Level Security) — restricted to service_role only
+-- RLS (Row Level Security)
 -- ============================================
-alter table projects enable row level security;
-alter table client_accounts enable row level security;
-alter table client_account_projects enable row level security;
-alter table screens enable row level security;
-alter table screenshot_versions enable row level security;
-alter table comments enable row level security;
-alter table replies enable row level security;
-alter table audit_log enable row level security;
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE client_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE client_account_projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE screens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE screenshot_versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE replies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
--- Service role policies (only service_role can access, not anon)
-create policy "Service role access" on projects for all to service_role using (true) with check (true);
-create policy "Service role access" on client_accounts for all to service_role using (true) with check (true);
-create policy "Service role access" on client_account_projects for all to service_role using (true) with check (true);
-create policy "Service role access" on screens for all to service_role using (true) with check (true);
-create policy "Service role access" on screenshot_versions for all to service_role using (true) with check (true);
-create policy "Service role access" on comments for all to service_role using (true) with check (true);
-create policy "Service role access" on replies for all to service_role using (true) with check (true);
-create policy "Service role access" on audit_log for all to service_role using (true) with check (true);
+-- Service role policies (service_role bypasses RLS, but explicit policies document intent)
+CREATE POLICY "Service role access" ON projects FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role access" ON client_accounts FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role access" ON client_account_projects FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role access" ON screens FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role access" ON screenshot_versions FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role access" ON comments FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role access" ON replies FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role access" ON audit_log FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- ============================================
--- STORAGE BUCKET for screenshots
--- ============================================
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('screenshots', 'screenshots', true, 10485760, '{"image/png","image/jpeg","image/webp","image/gif"}');
-
-create policy "Public read access" on storage.objects for select using (bucket_id = 'screenshots');
-create policy "Service role upload" on storage.objects for insert to service_role with check (bucket_id = 'screenshots');
-create policy "Service role update" on storage.objects for update to service_role using (bucket_id = 'screenshots') with check (bucket_id = 'screenshots');
-create policy "Service role delete" on storage.objects for delete to service_role using (bucket_id = 'screenshots');
+-- Deny anon access (defense-in-depth, added in migration 000008)
+-- Authenticated role policies (defense-in-depth, added in migration 000008)
+-- See migration 000008 for full RLS policy details.
 
 -- ============================================
--- FUNCTIONS
+-- STORAGE BUCKET for screenshots (private, set in migration 000008)
 -- ============================================
+-- Bucket is private. Use service_role or signed URLs for access.
 
--- Auto-update updated_at
-create or replace function update_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
+-- ============================================
+-- FUNCTIONS & TRIGGERS
+-- ============================================
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-create trigger projects_updated_at before update on projects
-  for each row execute function update_updated_at();
-create trigger screens_updated_at before update on screens
-  for each row execute function update_updated_at();
-create trigger comments_updated_at before update on comments
-  for each row execute function update_updated_at();
+CREATE TRIGGER projects_updated_at BEFORE UPDATE ON projects
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER screens_updated_at BEFORE UPDATE ON screens
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER comments_updated_at BEFORE UPDATE ON comments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();

@@ -3,7 +3,13 @@ import { sealData, unsealData } from 'iron-session';
 import type { SessionUser } from './types';
 
 const SESSION_COOKIE = 'rb_session';
-const SESSION_SECRET = process.env.SESSION_SECRET || 'reviewboard-default-secret-change-in-production-32chars!';
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error('SESSION_SECRET must be set and at least 32 characters long');
+  }
+  return secret;
+}
 
 export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
@@ -11,7 +17,7 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!sealed?.value) return null;
   try {
     return await unsealData<SessionUser>(sealed.value, {
-      password: SESSION_SECRET,
+      password: getSessionSecret(),
     });
   } catch {
     return null;
@@ -21,7 +27,7 @@ export async function getSession(): Promise<SessionUser | null> {
 export async function setSession(user: SessionUser) {
   const cookieStore = await cookies();
   const sealed = await sealData(user, {
-    password: SESSION_SECRET,
+    password: getSessionSecret(),
     ttl: 60 * 60 * 24 * 7, // 7 days
   });
   cookieStore.set(SESSION_COOKIE, sealed, {
@@ -50,7 +56,6 @@ export function hasProjectAccess(
 ): boolean {
   if (!user) return false;
   if (user.type === 'admin') return true;
-  if (user.project_id === projectId) return true;
   if (assignedProjectIds?.includes(projectId)) return true;
   return false;
 }

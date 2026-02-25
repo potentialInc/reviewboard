@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import { setSession } from '@/lib/auth';
 import { createServiceSupabase } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -15,7 +16,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { id, password } = await request.json();
+  let body: { id?: string; password?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const { id, password } = body;
 
   if (!id || !password) {
     return NextResponse.json({ error: 'ID and password are required' }, { status: 400 });
@@ -27,23 +35,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ type: 'admin', redirect: '/admin' });
   }
 
-  // Check client credentials
+  // Check client credentials (bcrypt hash comparison)
   const supabase = await createServiceSupabase();
   const { data: account } = await supabase
     .from('client_accounts')
-    .select('id, login_id, password, project_id')
+    .select('id, login_id, password')
     .eq('login_id', id)
     .single();
 
-  if (!account || account.password !== password) {
+  if (!account) {
     return NextResponse.json({ error: 'Invalid credentials. Please try again.' }, { status: 401 });
+  }
+
+  // Support both bcrypt hashed and legacy plaintext passwords
+  const isHashed = account.password.startsWith('$2');
+  const passwordMatch = isHashed
+    ? await bcrypt.compare(password, account.password)
+    : account.password === password;
+
+  if (!passwordMatch) {
+    return NextResponse.json({ error: 'Invalid credentials. Please try again.' }, { status: 401 });
+  }
+
+  // Auto-upgrade: hash plaintext password on successful login
+  if (!isHashed) {
+    const hashed = await bcrypt.hash(password, 12);
+    await supabase
+      .from('client_accounts')
+      .update({ password: hashed })
+      .eq('id', account.id);
   }
 
   await setSession({
     type: 'client',
     id: account.id,
     login_id: account.login_id,
-    project_id: account.project_id,
   });
 
   return NextResponse.json({ type: 'client', redirect: '/client/projects' });

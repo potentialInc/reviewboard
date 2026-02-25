@@ -1,12 +1,43 @@
+# Dependencies (installed in container)
 node_modules
+
+# Build output
 .next
+out
+
+# Environment files (secrets must NOT be baked into image)
 .env
 .env.*
 !.env.local.example
+
+# Version control
 .git
+.gitignore
+
+# Docker files (avoid recursive context)
 Dockerfile
 docker-compose*.yml
+
+# Documentation
 *.md
+LICENSE
+
+# IDE / OS
 .DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+
+# Tests (not needed in production image)
+src/__tests__
+vitest.config.*
+coverage
+
+# Supabase local data
 supabase/.branches
 supabase/.temp
+
+# CI/CD
+.github
+.harness

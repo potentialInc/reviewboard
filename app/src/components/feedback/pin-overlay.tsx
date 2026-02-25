@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useCallback } from 'react';
 import Image from 'next/image';
 import type { Comment, FeedbackStatus } from '@/lib/types';
 
@@ -17,13 +18,13 @@ interface PinOverlayProps {
   imageUrl: string;
 }
 
-export function PinOverlay({ comments, selectedPin, onPinClick, onImageClick, imageUrl }: PinOverlayProps) {
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPinClick, onImageClick, imageUrl }: PinOverlayProps) {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     onImageClick(x, y);
-  };
+  }, [onImageClick]);
 
   return (
     <div className="relative inline-block w-full cursor-crosshair" onClick={handleClick}>
@@ -32,7 +33,7 @@ export function PinOverlay({ comments, selectedPin, onPinClick, onImageClick, im
         alt="Screenshot"
         width={1920}
         height={1080}
-        sizes="100vw"
+        sizes="(max-width: 768px) 100vw, 75vw"
         className="w-full h-auto block"
         draggable={false}
         priority
@@ -58,4 +59,4 @@ export function PinOverlay({ comments, selectedPin, onPinClick, onImageClick, im
       ))}
     </div>
   );
-}
+});

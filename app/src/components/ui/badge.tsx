@@ -20,6 +20,24 @@ export function StatusBadge({ status }: { status: FeedbackStatus }) {
   );
 }
 
+export function getPinColor(status: FeedbackStatus): string {
+  if (status === 'open') return 'bg-red-500';
+  if (status === 'in-progress') return 'bg-yellow-500';
+  return 'bg-green-500';
+}
+
+export function getStatusTextColor(status: FeedbackStatus): string {
+  if (status === 'open') return 'text-red-700';
+  if (status === 'in-progress') return 'text-yellow-700';
+  return 'text-green-700';
+}
+
+export function getStatusBorderColor(status: FeedbackStatus): string {
+  if (status === 'open') return 'border border-red-200';
+  if (status === 'in-progress') return 'border border-yellow-200';
+  return 'border border-green-200';
+}
+
 export function CountBadge({ count, variant = 'default' }: { count: number; variant?: 'default' | 'danger' }) {
   const style = variant === 'danger'
     ? 'bg-red-100 text-red-700'

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabase } from '@/lib/supabase/server';
 import { getSession, isAdmin } from '@/lib/auth';
+import { validateUUID, sanitizeText, validateTextLength } from '@/lib/validation';
 import type { FeedbackStatus } from '@/lib/types';
 
 // PATCH /api/comments/[id] — update status or text
@@ -9,10 +10,36 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const uuidErr = validateUUID(id);
+  if (uuidErr) return uuidErr;
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json();
+  let body: { status?: string; text?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // SECURITY: Validate status value
+  const validStatuses: FeedbackStatus[] = ['open', 'in-progress', 'resolved'];
+  if (body.status && !validStatuses.includes(body.status as FeedbackStatus)) {
+    return NextResponse.json({ error: 'Invalid status value' }, { status: 400 });
+  }
+
+  // SECURITY: Status changes are admin-only
+  if (body.status && !isAdmin(session)) {
+    return NextResponse.json({ error: 'Forbidden: only admins can change status' }, { status: 403 });
+  }
+
+  // SECURITY: Sanitize text to prevent stored XSS
+  if (body.text !== undefined) {
+    body.text = sanitizeText(body.text);
+    const textErr = validateTextLength(body.text, 5000, 'Comment text');
+    if (textErr) return textErr;
+  }
+
   const supabase = await createServiceSupabase();
 
   // Get current comment for audit log
@@ -30,7 +57,7 @@ export async function PATCH(
   }
 
   const updates: Record<string, string | FeedbackStatus> = {};
-  if (body.status && isAdmin(session)) updates.status = body.status;
+  if (body.status && isAdmin(session)) updates.status = body.status as FeedbackStatus;
   if (body.text !== undefined) updates.text = body.text;
 
   // Early return if nothing to update
@@ -45,28 +72,37 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[comments/PATCH]', error.message);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
 
-  // Audit log
+  // Audit log — fire-and-forget to avoid blocking the response
+  const auditInserts = [];
   if (body.status && current.status !== body.status) {
-    await supabase.from('audit_log').insert({
+    auditInserts.push(supabase.from('audit_log').insert({
       entity_type: 'comment',
       entity_id: id,
       action: 'status_change',
       old_value: current.status,
       new_value: body.status,
       actor: session.login_id,
-    });
+    }));
   }
   if (body.text !== undefined && current.text !== body.text) {
-    await supabase.from('audit_log').insert({
+    auditInserts.push(supabase.from('audit_log').insert({
       entity_type: 'comment',
       entity_id: id,
       action: 'edit',
       old_value: current.text,
       new_value: body.text,
       actor: session.login_id,
-    });
+    }));
+  }
+  if (auditInserts.length > 0) {
+    Promise.all(auditInserts).catch((err) =>
+      console.error('[comments/PATCH audit]', err)
+    );
   }
 
   return NextResponse.json(data);
@@ -78,6 +114,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const uuidErr = validateUUID(id);
+  if (uuidErr) return uuidErr;
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -99,18 +137,22 @@ export async function DELETE(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  if (current) {
-    await supabase.from('audit_log').insert({
+  // Run audit log insert and comment delete in parallel
+  const [, { error }] = await Promise.all([
+    supabase.from('audit_log').insert({
       entity_type: 'comment',
       entity_id: id,
       action: 'delete',
       old_value: current.text,
       new_value: null,
       actor: session.login_id,
-    });
-  }
+    }),
+    supabase.from('comments').delete().eq('id', id),
+  ]);
 
-  const { error } = await supabase.from('comments').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[comments/DELETE]', error.message);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceSupabase } from '@/lib/supabase/server';
-import { getSession, isAdmin } from '@/lib/auth';
+import { requireAdminWithSupabase } from '@/lib/api-helpers';
 
 // GET /api/feedback — list all feedback (admin)
 export async function GET(request: NextRequest) {
-  const session = await getSession();
-  if (!session || !isAdmin(session)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAdminWithSupabase();
+  if (auth.error) return auth.error;
+  const { supabase } = auth;
 
   const url = new URL(request.url);
   const status = url.searchParams.get('status');
@@ -17,53 +15,54 @@ export async function GET(request: NextRequest) {
   const page = parseInt(url.searchParams.get('page') || '1');
   const perPage = parseInt(url.searchParams.get('per_page') || '25');
 
-  const supabase = await createServiceSupabase();
+  // Use !inner joins to enable server-side filtering by project/screen
+  // When filtering, we need inner joins; otherwise use regular joins
+  const svJoin = screenId || projectId ? '!inner' : '';
+  const screenJoin = projectId ? '!inner' : '';
 
-  // Build query via a join approach
   let query = supabase
     .from('comments')
     .select(`
       *,
-      screenshot_version:screenshot_versions(
+      screenshot_version:screenshot_versions${svJoin}(
         id, version, image_url,
-        screen:screens(
+        screen:screens${screenJoin}(
           id, name,
           project:projects(id, name)
         )
       ),
       replies(id)
     `, { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range((page - 1) * perPage, page * perPage - 1);
+    .order('created_at', { ascending: false });
 
   if (status && status !== 'all') {
     query = query.eq('status', status);
   }
 
   if (search) {
-    query = query.ilike('text', `%${search}%`);
+    const escaped = search.replace(/%/g, '\\%').replace(/_/g, '\\_');
+    query = query.ilike('text', `%${escaped}%`);
   }
+
+  // Server-side filtering through nested relations
+  if (screenId) {
+    query = query.eq('screenshot_version.screen_id', screenId);
+  }
+  if (projectId) {
+    query = query.eq('screenshot_version.screen.project_id', projectId);
+  }
+
+  // Apply pagination after filters so count is accurate
+  query = query.range((page - 1) * perPage, page * perPage - 1);
 
   const { data: comments, count, error } = await query;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  // Filter by project_id / screen_id in JS since they are nested relations
-  let filtered = comments || [];
-  if (projectId) {
-    filtered = filtered.filter((c) => {
-      const sv = c.screenshot_version as { screen?: { project?: { id: string } } };
-      return sv?.screen?.project?.id === projectId;
-    });
-  }
-  if (screenId) {
-    filtered = filtered.filter((c) => {
-      const sv = c.screenshot_version as { screen?: { id: string } };
-      return sv?.screen?.id === screenId;
-    });
+  if (error) {
+    console.error('[feedback/GET]', error.message);
+    return NextResponse.json({ error: 'Failed to load feedback' }, { status: 500 });
   }
 
-  const enriched = filtered.map((c) => {
+  const enriched = (comments || []).map((c) => {
     const sv = c.screenshot_version as {
       screen?: { name: string; project?: { name: string } };
     };
@@ -75,5 +74,8 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return NextResponse.json({ data: enriched, total: count || 0, page, per_page: perPage });
+  const res = NextResponse.json({ data: enriched, total: count || 0, page, per_page: perPage });
+  // Short cache for paginated feedback lists — stale-while-revalidate for seamless UX
+  res.headers.set('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+  return res;
 }

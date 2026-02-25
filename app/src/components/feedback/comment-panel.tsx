@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Send, MessageSquare } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/badge';
 import type { Comment } from '@/lib/types';
@@ -14,7 +14,7 @@ interface CommentPanelProps {
   userType: 'admin' | 'client';
 }
 
-export function CommentPanel({ comments, selectedPin, onSelectPin, onReply, userType }: CommentPanelProps) {
+export const CommentPanel = memo(function CommentPanel({ comments, selectedPin, onSelectPin, onReply, userType }: CommentPanelProps) {
   const [replyText, setReplyText] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -92,6 +92,7 @@ export function CommentPanel({ comments, selectedPin, onSelectPin, onReply, user
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
                         placeholder={userType === 'admin' ? 'Write a reply...' : 'Add a comment...'}
+                        aria-label={`Reply to pin ${c.pin_number}`}
                         className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20"
                         autoFocus
                         onKeyDown={(e) => {
@@ -104,9 +105,10 @@ export function CommentPanel({ comments, selectedPin, onSelectPin, onReply, user
                       <button
                         onClick={() => handleReply(c.id)}
                         disabled={!replyText.trim() || sending}
+                        aria-label="Send reply"
                         className="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50"
                       >
-                        <Send className="w-4 h-4" />
+                        <Send className="w-4 h-4" aria-hidden="true" />
                       </button>
                     </div>
                   ) : (
@@ -125,4 +127,4 @@ export function CommentPanel({ comments, selectedPin, onSelectPin, onReply, user
       ))}
     </div>
   );
-}
+});

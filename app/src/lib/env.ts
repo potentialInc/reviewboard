@@ -15,9 +15,19 @@ export function validateEnv() {
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
     'SUPABASE_SERVICE_ROLE_KEY',
+    'SESSION_SECRET',
+    'ADMIN_ID',
+    'ADMIN_PASSWORD',
   ];
 
   const missing = required.filter((key) => !process.env[key]);
+
+  // Validate SESSION_SECRET minimum length
+  const secret = process.env.SESSION_SECRET;
+  if (secret && secret.length < 32) {
+    missing.push('SESSION_SECRET (must be at least 32 characters)');
+  }
+
   if (missing.length > 0) {
     const msg = [
       '',

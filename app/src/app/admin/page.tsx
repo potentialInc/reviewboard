@@ -86,10 +86,10 @@ export default function AdminDashboard() {
     <div>
       <Breadcrumb items={[{ label: 'Dashboard' }]} />
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-10">
         <div>
-          <h1 className="text-3xl font-bold font-jakarta">Dashboard</h1>
-          <p className="text-muted mt-1">Overview of all active projects and feedback status.</p>
+          <h1 className="text-3xl font-bold font-jakarta text-slate-900">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Overview of all active projects and feedback status.</p>
         </div>
         <Link
           href="/admin/projects/new"
@@ -109,11 +109,11 @@ export default function AdminDashboard() {
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {statCards.map(({ key, label, icon: Icon, iconColor, numberColor, trend }) => (
-          <div key={key} className="bg-card rounded-2xl border border-border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-muted">{label}</span>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconColor}`}>
-                <Icon className="w-5 h-5" />
+          <div key={key} className="bg-card rounded-2xl border border-border shadow-sm p-6">
+            <div className="flex items-start justify-between mb-4">
+              <span className="text-sm font-medium text-muted">{label}</span>
+              <div className={`p-2 rounded-lg flex items-center justify-center ${iconColor}`}>
+                <Icon className="w-5 h-5" aria-hidden="true" />
               </div>
             </div>
             {loading ? (
@@ -129,14 +129,14 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent activity */}
-      <div className="bg-card rounded-2xl border border-border">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="text-lg font-bold font-jakarta">Recent Activity</h2>
-          <Link href="/admin/feedback" className="text-sm text-primary hover:underline">
+      <div className="bg-card rounded-2xl border border-border shadow-sm">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-lg font-bold font-jakarta text-slate-900">Recent Activity</h2>
+          <Link href="/admin/feedback" className="text-sm text-primary font-medium hover:underline">
             View All
           </Link>
         </div>
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-slate-100">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="p-4 flex gap-4">

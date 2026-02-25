@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceSupabase } from '@/lib/supabase/server';
-import { getSession, isAdmin } from '@/lib/auth';
+import { requireAdminWithSupabase } from '@/lib/api-helpers';
+import { validateUUID, sanitizeFilename } from '@/lib/validation';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // POST /api/projects/[id]/screens/[screenId]/screenshots — upload screenshot
 export async function POST(
@@ -8,12 +9,24 @@ export async function POST(
   { params }: { params: Promise<{ id: string; screenId: string }> }
 ) {
   const { id: projectId, screenId } = await params;
-  const session = await getSession();
-  if (!session || !isAdmin(session)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const projectIdErr = validateUUID(projectId, 'Project ID');
+  if (projectIdErr) return projectIdErr;
+  const screenIdErr = validateUUID(screenId, 'Screen ID');
+  if (screenIdErr) return screenIdErr;
+
+  const auth = await requireAdminWithSupabase();
+  if (auth.error) return auth.error;
+  const { session, supabase } = auth;
+
+  // SECURITY: Rate limit file uploads to prevent storage abuse (5 per minute)
+  if (!checkRateLimit(`upload:${session.id}`, 5, 60_000)) {
+    return NextResponse.json(
+      { error: 'Too many uploads. Please wait a moment.' },
+      { status: 429 }
+    );
   }
 
-  const supabaseCheck = await createServiceSupabase();
+  const supabaseCheck = supabase;
 
   // Validate screen exists and belongs to the specified project
   const { data: screen } = await supabaseCheck
@@ -33,6 +46,12 @@ export async function POST(
     return NextResponse.json({ error: 'File is required' }, { status: 400 });
   }
 
+  // Enforce file size limit (10MB)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json({ error: 'File too large. Maximum size is 10MB.' }, { status: 400 });
+  }
+
   // Validate file magic bytes server-side
   const headerBytes = new Uint8Array(await file.slice(0, 4).arrayBuffer());
   const isPng = headerBytes[0] === 0x89 && headerBytes[1] === 0x50
@@ -46,8 +65,6 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid image file. Only PNG, JPEG, WebP, and GIF are allowed.' }, { status: 400 });
   }
 
-  const supabase = await createServiceSupabase();
-
   // Get current max version
   const { data: versions } = await supabase
     .from('screenshot_versions')
@@ -58,20 +75,30 @@ export async function POST(
 
   const nextVersion = (versions?.[0]?.version || 0) + 1;
 
-  // Upload to storage
-  const ext = file.name.split('.').pop() || 'png';
+  // SECURITY: Sanitize filename and derive extension from validated magic bytes,
+  // not from user-supplied filename, to prevent path traversal and MIME mismatch.
+  const safeFilename = sanitizeFilename(file.name);
+  const rawExt = safeFilename.split('.').pop()?.toLowerCase() || '';
+  const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+  const ext = ALLOWED_EXTENSIONS.includes(rawExt)
+    ? rawExt
+    : (isPng ? 'png' : isJpeg ? 'jpg' : isWebp ? 'webp' : 'gif');
   const path = `${screenId}/v${nextVersion}.${ext}`;
   const arrayBuffer = await file.arrayBuffer();
 
+  // SECURITY: Derive content type from validated magic bytes, not user-supplied file.type.
+  // This prevents MIME type mismatch attacks where a malicious user sends a wrong Content-Type.
+  const contentType = isPng ? 'image/png' : isJpeg ? 'image/jpeg' : isWebp ? 'image/webp' : 'image/gif';
   const { error: uploadError } = await supabase.storage
     .from('screenshots')
     .upload(path, arrayBuffer, {
-      contentType: file.type,
+      contentType,
       upsert: true,
     });
 
   if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+    console.error('[screenshots/POST upload]', uploadError.message);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
   }
 
   const { data: { publicUrl } } = supabase.storage
@@ -89,7 +116,10 @@ export async function POST(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[screenshots/POST]', error.message);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
 
   // Update screen's updated_at
   await supabase

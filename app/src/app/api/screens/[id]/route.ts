@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceSupabase } from '@/lib/supabase/server';
-import { getSession, isAdmin, hasProjectAccess } from '@/lib/auth';
+import { requireAuthWithSupabase, requireAdminWithSupabase } from '@/lib/api-helpers';
+import { isAdmin, hasProjectAccess } from '@/lib/auth';
+import { validateUUID } from '@/lib/validation';
 
 // GET /api/screens/[id] — get screen with versions and comments
 export async function GET(
@@ -8,10 +9,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const uuidErr = validateUUID(id);
+  if (uuidErr) return uuidErr;
 
-  const supabase = await createServiceSupabase();
+  const auth = await requireAuthWithSupabase();
+  if (auth.error) return auth.error;
+  const { session, supabase } = auth;
 
   const { data: screen } = await supabase
     .from('screens')
@@ -35,15 +38,17 @@ export async function GET(
   if (!isAdmin(session)) {
     const projectData = Array.isArray(screen.project) ? screen.project[0] : screen.project;
     const projectId = projectData?.id;
-    if (projectId) {
-      const { data: assignments } = await supabase
-        .from('client_account_projects')
-        .select('project_id')
-        .eq('client_account_id', session.id);
-      const assignedProjectIds = (assignments || []).map((a: { project_id: string }) => a.project_id);
-      if (!hasProjectAccess(session, projectId, assignedProjectIds)) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+    // FIX: deny access when projectId is missing instead of silently granting it
+    if (!projectId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    const { data: assignments } = await supabase
+      .from('client_account_projects')
+      .select('project_id')
+      .eq('client_account_id', session.id);
+    const assignedProjectIds = (assignments || []).map((a: { project_id: string }) => a.project_id);
+    if (!hasProjectAccess(session, projectId, assignedProjectIds)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
   }
 
@@ -76,13 +81,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const session = await getSession();
-  if (!session || !isAdmin(session)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const uuidErr = validateUUID(id);
+  if (uuidErr) return uuidErr;
 
-  const supabase = await createServiceSupabase();
-  const { error } = await supabase.from('screens').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const auth = await requireAdminWithSupabase();
+  if (auth.error) return auth.error;
+
+  const { error } = await auth.supabase.from('screens').delete().eq('id', id);
+  if (error) {
+    console.error('[screens/DELETE]', error.message);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

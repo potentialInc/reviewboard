@@ -72,12 +72,17 @@ export default function FeedbackViewerPage() {
   const currentVersion = screen?.screenshot_versions.find((v) => v.id === selectedVersion)
     || screen?.latest_version;
 
-  const handleImageClick = (x: number, y: number) => {
+  const handleImageClick = useCallback((x: number, y: number) => {
     setNewPin({ x, y });
     setSelectedPin(null);
-  };
+  }, []);
 
-  const handleSubmitComment = async (text: string) => {
+  const handlePinClick = useCallback((c: Comment) => {
+    setSelectedPin(c.id);
+    setNewPin(null);
+  }, []);
+
+  const handleSubmitComment = useCallback(async (text: string) => {
     if (!currentVersion) return;
     const res = await fetch('/api/comments', {
       method: 'POST',
@@ -97,9 +102,9 @@ export default function FeedbackViewerPage() {
     } else {
       toast('Failed to submit feedback', 'error');
     }
-  };
+  }, [currentVersion, newPin, toast, fetchScreen]);
 
-  const handleReply = async (commentId: string, text: string) => {
+  const handleReply = useCallback(async (commentId: string, text: string) => {
     const res = await fetch(`/api/comments/${commentId}/replies`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -109,7 +114,7 @@ export default function FeedbackViewerPage() {
       toast('Reply added', 'success');
       await fetchScreen();
     }
-  };
+  }, [toast, fetchScreen]);
 
   if (loading) {
     return (
@@ -152,12 +157,19 @@ export default function FeedbackViewerPage() {
           <Link
             href={`/client/projects/${projectId}/screens`}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Back to screens"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5" aria-hidden="true" />
           </Link>
           <div>
-            <h1 className="text-base font-bold">{screen.name}</h1>
-            <p className="text-sm text-muted">{screen.project.name}</p>
+            <h1 className="text-base font-bold text-slate-900">{screen.name}</h1>
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              {currentVersion && (
+                <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-medium">
+                  v{currentVersion.version}{currentVersion.id === screen.latest_version?.id ? ' (Latest)' : ''}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -167,9 +179,11 @@ export default function FeedbackViewerPage() {
             <button
               onClick={() => setShowVersionPicker(!showVersionPicker)}
               className="flex items-center gap-2 px-3 py-1.5 bg-white border border-border rounded-lg text-sm font-medium hover:bg-gray-50"
+              aria-label={`Select version, currently v${currentVersion?.version || 1}`}
+              aria-expanded={showVersionPicker}
             >
               v{currentVersion?.version || 1}
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-4 h-4" aria-hidden="true" />
             </button>
             {showVersionPicker && (
               <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-xl shadow-lg py-1 z-30 min-w-[120px]">
@@ -196,7 +210,7 @@ export default function FeedbackViewerPage() {
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 gap-0 min-h-0 rounded-2xl border border-border overflow-hidden bg-white">
+      <div className="flex flex-col lg:flex-row flex-1 gap-0 min-h-0 rounded-2xl border border-border overflow-hidden bg-white">
         {/* Screenshot viewer */}
         <div className="flex-1 overflow-auto bg-gray-50 relative">
           {currentVersion ? (
@@ -204,10 +218,7 @@ export default function FeedbackViewerPage() {
               <PinOverlay
                 comments={currentVersion.comments || []}
                 selectedPin={selectedPin}
-                onPinClick={(c) => {
-                  setSelectedPin(c.id);
-                  setNewPin(null);
-                }}
+                onPinClick={handlePinClick}
                 onImageClick={handleImageClick}
                 imageUrl={currentVersion.image_url}
               />
@@ -228,10 +239,10 @@ export default function FeedbackViewerPage() {
         </div>
 
         {/* Comment side panel */}
-        <div className="w-96 border-l border-border flex flex-col">
+        <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-border flex flex-col">
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold flex items-center">
+              <h3 className="text-base font-bold text-slate-800 flex items-center">
                 Feedback
                 <span className="bg-slate-100 text-slate-600 text-xs font-medium rounded-full px-2 py-0.5 ml-2">
                   {currentVersion?.comments?.length || 0} Items

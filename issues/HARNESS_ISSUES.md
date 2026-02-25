@@ -124,3 +124,429 @@
   - 병렬 에이전트 파이프라인: QA 결과 JSON → 자동 분류 → 병렬 수정 에이전트 실행 → 빌드 검증
   - `harness.config.json`에 `max_parallel_fix_agents` 설정 (기본값: 화면 수)
   - 사용자 확인이 필요한 경우는 파괴적 변경(삭제, 구조 변경)에만 한정
+
+---
+
+# Comprehensive Harness Feature Audit
+
+> 전체 하네스 기능 감사: 사용/미사용 분류 및 개선 이슈.
+> 감사일: 2026-02-25
+
+## Feature Inventory & Usage Status
+
+### Core Scripts (.harness/*.sh) — 16 scripts
+
+| # | Script | Purpose | Used? | Notes |
+|---|--------|---------|-------|-------|
+| 1 | `auto-fix-loop.sh` | Run command, send failures to Claude for auto-fix, retry | NO | Never invoked during project |
+| 2 | `orchestrator.sh` | Parallel agent dispatch via worktrees | NO | All work done sequentially |
+| 3 | `worktree-manager.sh` | Create/list/cleanup git worktrees for parallel agents | NO | No worktrees created |
+| 4 | `pipeline-runner.sh` | Sequential 10-phase pipeline (init→deploy) | NO | Phases run manually ad-hoc |
+| 5 | `fullstack-runner.sh` | 5-superstage end-to-end (bootstrap→PRD→build→verify→ship) | NO | Not used; project built manually |
+| 6 | `config-validator.sh` | Validate harness.config.json schema | NO | Config never validated |
+| 7 | `deploy-manager.sh` | Detect/init/preview/promote deployments (Vercel, Fly, Docker, Railway) | NO | Docker/deploy setup done manually |
+| 8 | `db-manager.sh` | ORM detection, migrations, seeds, reset | NO | Supabase migrations run manually |
+| 9 | `env-manager.sh` | .env creation, validation, secret discovery | NO | .env.local created manually |
+| 10 | `infra-prep.sh` | Pre-pipeline Docker/DB/service readiness check | NO | Docker checked manually |
+| 11 | `stack-detector.sh` | Auto-detect tech stack (language, framework, ORM, etc.) | NO | Stack known upfront |
+| 12 | `project-init.sh` | Bootstrap new project from template or detect existing | NO | Project scaffolded via create-next-app |
+| 13 | `design-detector.sh` | Detect design assets for UI agent selection | NO | Mockups existed but detector not invoked |
+| 14 | `phase-validator.sh` | Validate pipeline phase artifacts | NO | No pipeline phases executed |
+| 15 | `prd-gate.sh` | PRD completeness validator (blocking/warning) | NO | No PRD created |
+| 16 | `prd-resolver.sh` | Find active PRD via SoT selection rules | PARTIAL | Tested in hooks but no active PRD to resolve |
+| 17 | `prompt-builder.sh` | Assemble Claude prompts for agent+phase+PRD | NO | No pipeline execution |
+| 18 | `review-fixer.sh` | Read review JSON, auto-fix P0, log P1+ to issues/ | NO | Reviews done manually |
+| 19 | `schema-analyzer.sh` | Detect FK ambiguity in SQL schemas (Supabase/PostgREST) | NO | FK issues discovered at runtime |
+
+### Agents (.harness/agents/) — 12 agents
+
+| # | Agent | Purpose | Used? |
+|---|-------|---------|-------|
+| 1 | `feature-builder.md` | Implement features from specs | NO (skill-activated in logs but 0 actual code changes) |
+| 2 | `bug-fixer.md` | Diagnose and fix bugs | NO (activated but 0 changes) |
+| 3 | `test-writer.md` | Write comprehensive tests | NO |
+| 4 | `refactorer.md` | Improve code quality | NO |
+| 5 | `reviewer.md` | Code review for quality/security | NO |
+| 6 | `devops-agent.md` | Deployment pipelines, Docker, cloud | NO |
+| 7 | `database-agent.md` | Schema design, migrations, data access | NO |
+| 8 | `security-agent.md` | Vulnerability scan, auth review, hardening | NO |
+| 9 | `performance-agent.md` | Analyze and optimize performance | NO |
+| 10 | `documentation-agent.md` | Generate/maintain documentation | NO |
+| 11 | `ui-builder.md` | Translate visual designs to production UI | NO |
+| 12 | `design-qa.md` | Visual fidelity QA against design source | PARTIAL (design-qa report exists in docs/) |
+
+### Skills (.harness/skills/) — 9 skills
+
+| # | Skill | Purpose | Used? |
+|---|-------|---------|-------|
+| 1 | `design-pipeline/` (8 files) | Full PRD→Aura→HTML→Git pipeline | PARTIAL (mockups exist, but pipeline not run) |
+| 2 | `prd-normalize/` | Convert any PRD to standard template | NO |
+| 3 | `html-to-react/` | 3-phase HTML prototype→React conversion | NO (critical miss: mockups/ had HTML prototypes) |
+| 4 | `e2e-gen/` | Generate E2E tests from routes | NO |
+| 5 | `api-docs/` | Auto-generate OpenAPI spec | NO |
+| 6 | `visual-regression/` | Visual regression testing | NO |
+| 7 | `load-testing/` | Load/stress testing | NO |
+| 8 | `flaky-test-detection/` | Detect and fix flaky tests | NO |
+| 9 | `playwright-cli/` | Browser automation for E2E | NO |
+
+### Hooks (.harness/hooks/) — 11 hooks
+
+| # | Hook | Purpose | Active? |
+|---|------|---------|---------|
+| 1 | `session-start.sh` | Display status + magic keywords | YES (ran on session start) |
+| 2 | `skill-activation-prompt.sh` | Detect magic keywords in prompts | YES (logged activations) |
+| 3 | `pre-edit-arch-check.sh` | Architecture + protected path guard | YES (blocked .harness/ edits) |
+| 4 | `pre-edit-security-check.sh` | Block secret leaks in edits | UNKNOWN |
+| 5 | `pre-bash-guard.sh` | Block dangerous bash commands | UNKNOWN |
+| 6 | `post-edit-format.sh` | Auto-format after edits | UNKNOWN |
+| 7 | `post-edit-lint.sh` | Auto-lint after edits | UNKNOWN |
+| 8 | `post-edit-test.sh` | Run relevant tests after edits | UNKNOWN |
+| 9 | `auto-reflect.sh` | Auto-record patterns/mistakes | UNKNOWN |
+| 10 | `on-stop-summary.sh` | Record session summary to PROGRESS.md | YES (PROGRESS.md has entries) |
+| 11 | `build-check.sh` | Verify build passes | UNKNOWN |
+
+### Orchestration Modes (.harness/orchestration/modes/) — 5 modes
+
+| # | Mode | Purpose | Used? |
+|---|------|---------|-------|
+| 1 | `solo.md` | Single focused task | YES (de facto, all work was solo) |
+| 2 | `parallel.md` | N agents simultaneously | NO |
+| 3 | `pipeline.md` | Sequential phases with dependencies | NO |
+| 4 | `team.md` | PM→Dev→QA autonomous loop | NO (attempted once, 0 changes) |
+| 5 | `fullstack.md` | Idea→deployed project | NO |
+
+### CI Workflows (.harness/ci/) — 5 workflows + 1 trigger script
+
+| # | Workflow | Purpose | Used? |
+|---|----------|---------|-------|
+| 1 | `claude-auto-fix.yml` | Auto-fix failing CI via Claude | NO (not copied to .github/) |
+| 2 | `claude-deploy.yml` | Claude-assisted deployment | NO |
+| 3 | `claude-issue-solver.yml` | Auto-solve GitHub issues | NO |
+| 4 | `claude-pr-review.yml` | Auto-review PRs with Claude | NO |
+| 5 | `claude-security-scan.yml` | Security scan via Claude in CI | NO |
+| 6 | `trigger-claude.sh` | CI wrapper for Claude invocation | NO |
+
+### Tests (.harness/tests/) — 24 tests
+
+| Category | Count | Used? |
+|----------|-------|-------|
+| Smoke (P2) | 15 | NO (run-tests.sh never executed) |
+| Guards (P0/P1) | 9 | NO (never executed) |
+
+### Memory (.harness/memory/) — 6 files
+
+| # | File | Purpose | Used? |
+|---|------|---------|-------|
+| 1 | `DECISIONS.md` | Architecture decision records | YES (has 5 ADRs, but all pre-existing) |
+| 2 | `PATTERNS.md` | Discovered patterns | YES (has 3 patterns, but all pre-existing) |
+| 3 | `MISTAKES.md` | Bug patterns to avoid | YES (has 3 entries, but all pre-existing) |
+| 4 | `PROGRESS.md` | Session summaries | YES (auto-recorded, but all "No git changes") |
+| 5 | `PROGRESS.archive.md` | Archived sessions | YES |
+| 6 | `memory-manager.sh` | Memory CRUD operations | UNKNOWN |
+
+### Other Features
+
+| # | Feature | Purpose | Used? |
+|---|---------|---------|-------|
+| 1 | CLI (`cli/`) | TypeScript CLI: audit, skill-detect, etc. | NO |
+| 2 | MCP integrations (`mcp.json`) | Playwright, PostgreSQL, GitHub MCP | NO |
+| 3 | Templates (`templates/`) | 20+ project/status templates | NO |
+| 4 | Scripts: `autopilot.sh` | Persistent tmux-based autonomous execution | NO |
+| 5 | Scripts: `doctor.sh` | Pre-flight diagnostic | NO |
+| 6 | Scripts: `status-dashboard.sh` | Project health at a glance | NO |
+| 7 | Scripts: `generate-report.sh` | Client-facing project report | NO |
+| 8 | Scripts: `welcome-wizard.sh` | Interactive first-run guide | NO |
+| 9 | Scripts: `first-task-guide.sh` | "What to type next" suggestions | NO |
+| 10 | `lib/common.sh` | Shared shell utilities | NO (each script duplicates colors/logging) |
+| 11 | PRD templates (`prd/`) | Feature PRD + System Decision templates | NO (no PRD created for ReviewBoard) |
+
+## Summary
+
+**Total features available**: ~85 (16 core scripts, 12 agents, 9 skills, 11 hooks, 5 modes, 6 CI workflows, 24 tests, misc)
+**Features actually used**: ~6 (session-start hook, skill-activation hook, pre-edit-arch-check hook, on-stop-summary hook, solo mode by default, memory PROGRESS.md)
+**Usage rate**: ~7%
+
+---
+
+## New Issues
+
+### HARNESS-012: html-to-react 스킬 미사용 — HTML 프로토타입이 있었는데 수동 변환
+- **Status**: Open
+- **Priority**: P1
+- **Description**: `mockups/` 디렉토리에 11개의 HTML 프로토타입(login, admin-dashboard, client-dashboard 등)이 존재했음. `.harness/skills/html-to-react/SKILL.md`는 3단계 자동 변환 파이프라인(analyze→map→prompts)을 제공했으나 전혀 사용되지 않음. 대신 모든 페이지를 수동으로 Next.js 컴포넌트로 재구현.
+- **Action**:
+  1. `design-detector.sh`가 `mockups/` 경로도 탐지하도록 개선 (현재 `design/screens/`, `design/mockups/`만 탐색)
+  2. session-start 훅에서 HTML 프로토타입 존재 시 `html-to-react:` 스킬 자동 추천
+  3. `html-to-react` 스킬의 Phase 1(analyze)을 프로젝트 시작 시 자동 실행하여 변환 계획 생성
+  4. 향후 프로젝트에서 mockups/ 감지 시 "HTML→React 자동 변환 가능" 메시지 표시
+
+### HARNESS-013: schema-analyzer.sh 미사용 — Supabase FK 모호성 런타임에서 발견
+- **Status**: Open
+- **Priority**: P1
+- **Description**: `schema-analyzer.sh`는 SQL 스키마의 FK 모호성을 사전에 감지하는 도구. ReviewBoard에서 `client_accounts(login_id)` PostgREST nested select가 ambiguous FK로 실패했지만(HARNESS-004), 이 도구를 실행했다면 빌드 타임에 발견 가능했음. `app/src/lib/supabase/schema.sql`과 `app/supabase/migrations/` 파일이 존재했으므로 분석 대상이 있었음.
+- **Action**:
+  1. `schema-analyzer.sh`를 pipeline-runner.sh의 phase 4(database) 완료 후 자동 실행하도록 연결
+  2. Supabase 프로젝트 감지 시(supabase/ 디렉토리 존재) `infra-prep.sh`에서 자동 스키마 분석 실행
+  3. migration 파일 변경 시 post-edit 훅에서 schema-analyzer 트리거
+  4. 결과를 issues/ 폴더에 자동 기록
+
+### HARNESS-014: auto-fix-loop.sh 미사용 — 빌드 오류를 수동으로 반복 수정
+- **Status**: Open
+- **Priority**: P1
+- **Description**: 프로젝트 빌드 중 TypeScript 타입 오류, 누락된 import, 환경변수 문제 등이 발생했으나 모두 수동으로 수정. `auto-fix-loop.sh`는 실패한 명령어를 Claude에게 보내 자동 수정 후 재시도하는 기능을 제공하지만 한 번도 실행되지 않음. `npm run build` 실패 → 자동 수정 → 재빌드 루프가 가능했음.
+- **Action**:
+  1. `npm run build` 또는 `npx tsc --noEmit` 실패 시 자동으로 `auto-fix-loop.sh` 트리거하는 post-build 훅 추가
+  2. session-start에서 빌드 실패 이력이 있으면 auto-fix-loop 사용 안내 메시지 출력
+  3. `.claude/settings.local.json`에 auto-fix 명령어 사전 허용 등록
+  4. auto-fix-loop 실행 결과를 memory/PROGRESS.md에 자동 기록
+
+### HARNESS-015: pipeline-runner.sh / fullstack-runner.sh 미사용 — 전체 개발을 순차적으로 수동 진행
+- **Status**: Open
+- **Priority**: P1
+- **Description**: ReviewBoard는 types→database→backend→frontend→integrate→test→deploy 순서로 개발되었으나, 이 순서를 `pipeline-runner.sh`의 10단계 파이프라인이 정확히 정의하고 있었음. `fullstack-runner.sh`는 BOOTSTRAP→PRD→BUILD→VERIFY→SHIP 5단계를 자동 실행. 둘 다 사용하지 않고 사람이 직접 단계를 관리.
+- **Action**:
+  1. PRD 없이도 pipeline-runner를 실행할 수 있는 `--no-prd` 모드 추가 (CLAUDE.md 기반 동작)
+  2. fullstack-runner에 "기존 프로젝트 편입" 모드 추가 (이미 코드가 있는 상태에서 verify→ship만 실행)
+  3. session-start 훅에서 프로젝트 상태 분석 후 "pipeline:" 또는 "fullstack:" 명령어 추천
+  4. 파이프라인 실행 없이 개발이 진행되면 경고 메시지 출력
+
+### HARNESS-016: PRD 미작성 — prd/ 디렉토리 비어있음
+- **Status**: Open
+- **Priority**: P1
+- **Description**: `.harness/prd/`에 `FEATURE_PRD.template.md`와 `SYSTEM_DECISION.template.md` 템플릿이 존재했으나, ReviewBoard용 PRD(`prd-reviewboard.md`)를 작성하지 않음. PRD가 없어서 `prd-gate.sh`, `prd-resolver.sh`, `pipeline-runner.sh`, `fullstack-runner.sh`, `prompt-builder.sh` 등 5개 이상의 도구가 비활성화 상태였음. PRD는 모든 파이프라인의 SoT(Source of Truth).
+- **Action**:
+  1. 프로젝트 시작 시 PRD 작성을 강제하는 게이트 추가 — PRD 없으면 파이프라인 시작 불가 경고
+  2. `prd:` 스킬로 기존 CLAUDE.md + 코드에서 PRD 역생성 기능 추가
+  3. session-start에서 prd/ 비어있으면 "PRD를 먼저 작성하세요" 안내 + 템플릿 경로 표시
+  4. CLAUDE.md에 PRD 필수 여부를 명시하는 섹션 추가
+
+### HARNESS-017: env-manager.sh 미사용 — .env 수동 생성, 시크릿 수동 복사
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `env-manager.sh`는 스택별 .env 템플릿 생성, 필수 환경변수 검증, 시블링 프로젝트에서 시크릿 자동 탐색 기능을 제공. ReviewBoard에서 `.env.local`을 수동으로 생성하고, Supabase URL/키, Slack 토큰 등을 다른 프로젝트에서 수동 복사했음. `env-manager.sh discover`를 실행했다면 자동으로 기존 프로젝트의 시크릿을 찾아 제안했을 것.
+- **Action**:
+  1. `infra-prep.sh`에서 `.env.local` 미존재 시 자동으로 `env-manager.sh init` 실행
+  2. `env-manager.sh check`를 빌드 전 자동 실행 — 필수 변수 누락 시 빌드 차단
+  3. Supabase 프로젝트 감지 시 필요한 환경변수 목록을 자동 생성하는 스택 규칙 추가
+  4. session-start에서 .env 파일 상태 요약 표시
+
+### HARNESS-018: deploy-manager.sh 미사용 — Docker/배포 설정 수동 생성
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `deploy-manager.sh`는 프로젝트 타입 감지 후 Dockerfile, docker-compose, Vercel/Fly/Railway 설정을 자동 생성. ReviewBoard의 `Dockerfile`, `docker-compose.yml`, `docker-compose.dev.yml`을 모두 수동으로 작성했으나, `deploy-manager.sh init docker`를 실행했다면 Next.js standalone 모드 감지 후 적절한 Dockerfile 자동 생성이 가능했음.
+- **Action**:
+  1. pipeline-runner의 phase 10(deploy) 실행 시 `deploy-manager.sh detect` 자동 호출
+  2. `deploy:` 키워드 사용 시 deploy-manager를 먼저 실행하는 스킬 규칙 추가
+  3. templates/deploy/ 의 기존 템플릿과 프로젝트 감지 결과를 결합하는 로직 강화
+  4. deploy-manager가 생성한 파일을 `harness.config.json`에 기록하여 추적
+
+### HARNESS-019: db-manager.sh 미사용 — Supabase 마이그레이션 수동 관리
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `db-manager.sh`는 Prisma, Drizzle, Supabase 등의 ORM을 자동 감지하고 마이그레이션 실행, 시드 데이터 삽입, 상태 확인 기능 제공. ReviewBoard는 `app/supabase/migrations/`에 6개 마이그레이션 파일과 `seed.sql`이 있었으나, 이를 `supabase db push`로 수동 실행. `db-manager.sh migrate`로 자동화 가능했음.
+- **Action**:
+  1. `supabase/` 디렉토리 존재 감지 시 db-manager에 Supabase CLI 연동 추가
+  2. pipeline-runner의 phase 4(database) 실행 시 `db-manager.sh detect` + `migrate` 자동 호출
+  3. 스키마 변경(migration 파일 수정) 감지 시 post-edit 훅에서 `db-manager.sh status` 실행
+  4. seed.sql 존재 시 개발 환경 시작 시 자동 시드 옵션 제공
+
+### HARNESS-020: test-writer 에이전트 미사용 — 테스트 코드 0줄
+- **Status**: Open
+- **Priority**: P1
+- **Description**: ReviewBoard에는 API 라우트 17개, 서비스 로직(auth, slack, rate-limit), UI 컴포넌트 12개가 있으나 테스트 코드가 단 하나도 없음. `test-writer` 에이전트는 공개 함수 스캔 → 우선순위 분류 → 유닛/통합/E2E 테스트 작성 파이프라인을 제공. `test:` 키워드로 즉시 활성화 가능했음.
+- **Action**:
+  1. pipeline-runner의 phase 8(test) + 9(qa) 완료를 빌드 성공 조건에 포함
+  2. `build:` 또는 `fullstack:` 키워드 실행 시 테스트 작성을 자동 포함하는 규칙 추가
+  3. post-build 훅에서 테스트 커버리지가 0%이면 강제 경고 + `test:` 명령어 안내
+  4. e2e-gen 스킬과 연동하여 라우트 기반 E2E 테스트 자동 생성
+
+### HARNESS-021: security-agent 미사용 — 보안 감사 미실시
+- **Status**: Open
+- **Priority**: P1
+- **Description**: ReviewBoard는 인증(세션 기반), 관리자/클라이언트 분리, Supabase RLS, API 라우트 보호 등 보안이 중요한 기능을 다수 포함. `security-agent`는 의존성 취약점 스캔, 시크릿 하드코딩 감지, 인증 흐름 감사, 입력 검증 확인, 보안 헤더 검증을 자동 수행하나 사용되지 않음. `secure:` 키워드로 실행 가능했음.
+- **Action**:
+  1. `fullstack-runner`의 VERIFY 단계에 security-agent 실행 추가
+  2. `deploy:` 키워드 실행 전 security-agent를 자동 게이트로 추가
+  3. CI workflow `claude-security-scan.yml`을 `.github/workflows/`에 복사하는 자동화 추가
+  4. 인증 관련 코드 변경 시 post-edit 훅에서 security-agent 트리거
+
+### HARNESS-022: reviewer 에이전트 미사용 — 코드 리뷰 수동 진행
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `reviewer` 에이전트는 코드 품질, 보안, 아키텍처 준수를 자동 리뷰. design-qa 리포트가 수동으로 생성되었듯이, 코드 리뷰도 수동이었음. `review:` 키워드로 전체 코드베이스 리뷰가 가능했고, `review-fixer.sh`로 결과를 자동 수정할 수 있었음.
+- **Action**:
+  1. 주요 기능 완성 후 자동으로 `review:` 에이전트 실행하는 post-phase 훅 추가
+  2. `review-fixer.sh`가 reviewer 출력을 직접 소비할 수 있도록 출력 포맷 통일
+  3. CI에서 `claude-pr-review.yml` 워크플로우를 활성화하여 PR마다 자동 리뷰
+  4. 리뷰 결과를 issues/ 폴더에 구조화된 형태로 자동 기록
+
+### HARNESS-023: CI 워크플로우 5개 전부 미활성화
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `.harness/ci/.github/workflows/`에 5개의 Claude 기반 CI 워크플로우(auto-fix, deploy, issue-solver, pr-review, security-scan)가 준비되어 있었으나, 프로젝트의 `.github/workflows/`에 복사되지 않아 전혀 실행되지 않음. 특히 `claude-auto-fix.yml`(CI 실패 시 자동 수정)과 `claude-pr-review.yml`(PR 자동 리뷰)은 즉시 가치를 제공할 수 있었음.
+- **Action**:
+  1. `project-init.sh` 또는 `fullstack-runner` BOOTSTRAP 단계에서 CI 워크플로우 자동 복사
+  2. session-start에서 `.github/workflows/`에 Claude 워크플로우가 없으면 안내 메시지 출력
+  3. `deploy:` 키워드 실행 시 `claude-deploy.yml` 자동 설치 제안
+  4. CI 워크플로우 설치 상태를 `status-dashboard.sh`에 표시
+
+### HARNESS-024: orchestrator.sh / worktree-manager.sh 미사용 — 병렬 실행 기회 놓침
+- **Status**: Open
+- **Priority**: P2
+- **Description**: ReviewBoard 개발에서 독립적인 작업들(admin 대시보드 vs client 대시보드, API 라우트 vs UI 컴포넌트)을 순차적으로 처리했으나, `parallel:` 모드로 동시 실행이 가능했음. `orchestrator.sh`는 tasks.json 기반으로 여러 에이전트를 별도 worktree에서 동시 실행하고 결과를 자동 머지.
+- **Action**:
+  1. `build:` 키워드에 복수 모듈이 감지되면 자동으로 `parallel:` 모드 제안
+  2. tasks.json 자동 생성 기능 추가 — PRD 또는 CLAUDE.md에서 독립 작업 추출
+  3. orchestrator 실행 결과를 PROGRESS.md에 자동 기록
+  4. session-start에서 이전 세션의 TODO가 2개 이상 독립 작업이면 병렬 모드 추천
+
+### HARNESS-025: 테스트 스위트 24개 전부 미실행 — 하네스 무결성 미검증
+- **Status**: Open
+- **Priority**: P1
+- **Description**: `.harness/tests/`에 smoke 15개 + guard 9개 = 총 24개 테스트가 있었으나 `run-tests.sh`가 한 번도 실행되지 않음. Guard 테스트는 보호 경로 무결성, 레이어 위반, 경로 순회 공격 방어 등 P0 보안 테스트를 포함. `.harness/` 디렉토리 이동 후 경로 불일치 문제(HARNESS-011)도 테스트 실행으로 조기 발견 가능했음.
+- **Action**:
+  1. session-start 훅에서 마지막 테스트 실행 시간 확인 → 24시간 초과 시 자동 실행 또는 강제 안내
+  2. auto-fix-loop 성공 후 자동으로 guard 테스트 실행 (이미 코드에 있지만 루프 자체가 미실행)
+  3. `.harness/` 구조 변경 감지 시 자동으로 `run-tests.sh all` 트리거
+  4. CI 파이프라인에 guard 테스트를 필수 게이트로 추가
+
+### HARNESS-026: scripts/ 유틸리티 7개 전부 미사용
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `scripts/` 디렉토리의 7개 유틸리티가 모두 미사용:
+  - `doctor.sh`: 사전 진단 — Docker, jq, claude CLI 등 필수 도구 존재 확인. Docker Desktop 미실행 문제(HARNESS-001)를 자동 감지했을 것
+  - `status-dashboard.sh`: 프로젝트 건강 상태 한눈에 보기 — 빌드/테스트 상태, 워크트리, 메모리 요약
+  - `generate-report.sh`: 고객용 PROJECT_REPORT.md 자동 생성
+  - `welcome-wizard.sh`: 첫 실행 대화형 가이드
+  - `first-task-guide.sh`: 현재 상태 분석 후 다음 작업 추천
+  - `autopilot.sh`: tmux 기반 지속 자율 실행
+  - `harness-install.sh` / `quick-install.sh`: 하네스 설치 자동화
+- **Action**:
+  1. session-start 훅에 `doctor.sh` 결과 요약을 포함 (현재는 jq/git/claude만 체크)
+  2. `first-task-guide.sh`를 session-start의 마지막 섹션으로 자동 실행
+  3. 프로젝트 완료 시(SHIP 단계) `generate-report.sh` 자동 실행
+  4. `status-dashboard.sh`를 `harness status` CLI 명령어에 연결
+
+### HARNESS-027: MCP 통합 3개 미사용 — Playwright, PostgreSQL, GitHub
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `.harness/mcp.json`에 Playwright(브라우저 자동화), PostgreSQL(직접 DB 접근), GitHub(이슈/PR 관리) MCP 서버가 설정되어 있었으나 프로젝트에서 활성화되지 않음. Playwright MCP로 E2E 테스트를 실행하고, PostgreSQL MCP로 Supabase 직접 쿼리하고, GitHub MCP로 이슈를 자동 생성할 수 있었음.
+- **Action**:
+  1. `mcp.json`을 프로젝트 루트의 `.claude/` 설정에 자동 연결하는 설치 스크립트 추가
+  2. `infra-prep.sh`에서 MCP 서버 가용성 체크 추가
+  3. `test:` 키워드 실행 시 Playwright MCP 자동 연결
+  4. `db:` 키워드 실행 시 PostgreSQL MCP 자동 연결 (DATABASE_URL 필요)
+
+### HARNESS-028: CLI (harness-cli.mjs) 미사용 — TypeScript CLI 빌드/실행 안 됨
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `.harness/cli/`에 TypeScript 기반 CLI가 있으며 `config validate`, `skill-detect`, `audit` 등의 명령어를 제공. 빌드된 `dist/harness-cli.mjs`도 존재하나 한 번도 실행되지 않음. `config-validator.sh`가 CLI를 우선 사용하도록 설계되어 있었으나, CLI 자체가 실행된 적이 없음.
+- **Action**:
+  1. session-start 훅에서 CLI 가용 여부 확인 + 미빌드 시 자동 빌드 시도
+  2. `harness` CLI 명령어를 magic keyword로 등록 (`harness:` 키워드)
+  3. `npm run build`가 성공한 후 CLI 자동 빌드하는 post-build 훅 추가
+  4. CLI 명령어를 shell 스크립트의 Tier 1 실행 경로로 활용 (config-validator.sh 패턴 확산)
+
+### HARNESS-029: templates/ 20+ 템플릿 미활용 — 프로젝트 구조 직접 생성
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `.harness/templates/`에 nextjs, auth, deploy, qa, status 등 20개 이상의 프로젝트 템플릿이 있었으나 전혀 참조되지 않음. 특히:
+  - `templates/auth/supabase-auth.md`: Supabase 인증 패턴 — ReviewBoard의 auth 구현에 직접 활용 가능했음
+  - `templates/deploy/`: Docker + CI 설정 템플릿
+  - `templates/status/PIPELINE_STATUS.template.md`: 파이프라인 상태 추적
+  - `templates/qa/`: QA 체크리스트
+  - `templates/seed/`: 시드 데이터 가이드
+- **Action**:
+  1. `project-init.sh --detect`에서 감지된 스택에 맞는 템플릿 자동 적용
+  2. 에이전트 프롬프트에 관련 템플릿 경로를 자동 주입 (`prompt-builder.sh` 개선)
+  3. `stack-map.json`과 템플릿 디렉토리를 연결하는 자동 매핑 로직 추가
+  4. session-start에서 미사용 템플릿 중 현재 작업에 관련된 것 추천
+
+### HARNESS-030: design-detector.sh + ui-builder 에이전트 미사용 — UI 구현 수동 진행
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `design-detector.sh`는 `design/screens/`, `design/mockups/`, `design/figma/` 경로에서 디자인 자산을 탐지하여 적절한 에이전트(ui-builder vs feature-builder)를 선택. `mockups/` 디렉토리에 HTML 프로토타입이 11개 존재했으나, `design/mockups/`가 아닌 프로젝트 루트의 `mockups/`에 있어서 탐지 실패. ui-builder 에이전트는 시각적 디자인을 프로덕션 UI 컴포넌트로 변환하는 전문 에이전트였으나 활성화되지 않음.
+- **Action**:
+  1. `design-detector.sh`에 프로젝트 루트의 `mockups/` 경로 추가 탐색
+  2. design-detector가 0 결과일 때도 프로젝트 전체에서 HTML/이미지 파일 검색하는 폴백 추가
+  3. `pipeline-runner.sh` phase 6(frontend)에서 design-detector 결과에 따라 ui-builder 자동 선택 확인
+  4. SCREEN_STATUS.md를 ui-builder 출력으로 자동 생성하는 파이프라인 연결
+
+### HARNESS-031: documentation-agent + api-docs 스킬 미사용 — API 문서화 없음
+- **Status**: Open
+- **Priority**: P2
+- **Description**: ReviewBoard에 17개의 API 라우트가 있으나 API 문서가 전혀 없음. `documentation-agent`는 코드에서 엔드포인트를 자동 스캔하여 OpenAPI 3.1 스펙을 생성하고, `api-docs` 스킬은 라우트 파일에서 요청/응답 스키마를 추출. `docs:` 키워드로 즉시 실행 가능했음.
+- **Action**:
+  1. pipeline-runner의 phase 9(qa) 완료 후 documentation-agent 자동 실행 옵션 추가
+  2. `docs:` 키워드 실행 시 api-docs 스킬을 우선 활성화
+  3. API 라우트 파일 변경 시 post-edit 훅에서 OpenAPI 스펙 갱신 알림
+  4. `generate-report.sh`에 API 문서 포함 여부 체크 추가
+
+### HARNESS-032: memory/ 시스템 사전 데이터만 존재 — 프로젝트 고유 학습 기록 없음
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `memory/DECISIONS.md`에 5개 ADR, `PATTERNS.md`에 3개 패턴, `MISTAKES.md`에 3개 실수가 기록되어 있으나 모두 하네스 초기 설정 시 작성된 것. ReviewBoard 개발 중 발견된 패턴(Supabase RLS 설정, PostgREST FK 모호성, Next.js standalone Docker 빌드 등)이 기록되지 않음. `PROGRESS.md`는 40개 이상의 세션을 기록했으나 모두 "No git changes detected".
+- **Action**:
+  1. `auto-reflect.sh` 훅이 실제 코드 변경 시에만 패턴/실수를 기록하도록 개선
+  2. 에이전트가 새로운 패턴을 발견하면 명시적으로 `memory-manager.sh add-pattern` 호출하도록 프롬프트에 포함
+  3. PROGRESS.md에 "No git changes" 세션이 연속 3회 이상이면 경고 + 원인 분석
+  4. 이슈 해결 시(issues/ 파일 수정 시) 자동으로 MISTAKES.md에 학습 기록 추가
+
+### HARNESS-033: infra-prep.sh 미사용 — Docker/Supabase 준비 상태 수동 확인
+- **Status**: Open
+- **Priority**: P2
+- **Description**: `infra-prep.sh`는 Docker 데몬 상태, 로컬 DB 연결, 필요 서비스 가동 여부를 사전 확인하고 자동 시작을 시도. HARNESS-001에서 Docker Desktop 미실행으로 Supabase 시작 실패한 문제는 `infra-prep.sh`를 실행했다면 자동 감지 + 안내가 가능했음.
+- **Action**:
+  1. `fullstack-runner.sh`의 Stage 0(INFRA PREP)이 이미 호출하지만, fullstack-runner 자체가 미사용이므로 독립 실행 경로 필요
+  2. session-start 훅에서 `infra-prep.sh --check-only` 자동 실행 (경량 모드)
+  3. `docker-compose.yml` 존재 감지 시 Docker 상태 자동 확인
+  4. Supabase 프로젝트에서 `supabase status` 결과를 infra-prep에 통합
+
+### HARNESS-035: 이슈 발견 후 즉시 수정 파이프라인 부재
+- **Status**: Open
+- **Priority**: P0
+- **Description**: 보안 감사, 코드 리뷰, 스키마 분석 에이전트 3개가 총 80+ 이슈를 발견했으나, 에이전트가 "분석 → 보고 → 사용자 확인 대기" 패턴을 따라 즉시 수정하지 않음. 사용자가 "이슈가 있는것들은 그대로 바로 고치면서 진행해야되는데 도대체 왜 안한거지?"라고 지적. HARNESS-003(리뷰 결과 자동 수정 파이프라인 부재)과 HARNESS-007(변경 규모와 관계없이 한번에 실행 원칙)의 동일 패턴 반복.
+- **근본 원인**: 에이전트의 기본 행동이 "보고 우선, 수정은 별도"로 설정되어 있음. 리뷰 에이전트 출력이 사람 읽기용 텍스트로만 생성되어 자동 수정 파이프라인에 입력할 수 없는 형태.
+- **Action**:
+  1. 리뷰 에이전트 출력을 JSON 구조화: `{ file, line, severity, fix_code, description }`
+  2. `review-fixer.sh`가 리뷰 JSON을 소비하여 P0/P1은 즉시 수정, P2+는 issues/ 기록
+  3. 에이전트 공통 규칙에 "발견 즉시 수정" 원칙 추가 — 분석과 수정을 절대 분리하지 않음
+  4. `parallel:` 모드에서 리뷰 에이전트 + 수정 에이전트를 파이프라인으로 연결
+  5. 수정 불가능한 이슈(외부 서비스, 인프라 변경)만 issues/에 기록하고 나머지는 즉시 코드 수정
+
+### HARNESS-034: performance-agent / load-testing 스킬 미사용 — 성능 최적화 미실시
+- **Status**: Open
+- **Priority**: P3
+- **Description**: ReviewBoard는 이미지 업로드(스크린샷), 실시간 댓글, 핀 기반 피드백 등 성능에 민감한 기능을 포함. `performance-agent`는 번들 크기 분석, API 응답 시간 벤치마크, 이미지 최적화 검토를 자동 수행. `load-testing` 스킬은 부하 테스트 시나리오를 생성. 두 가지 모두 미사용.
+- **Action**:
+  1. VERIFY 단계에 performance-agent를 선택적 실행 옵션으로 추가
+  2. `perf:` 키워드 실행 시 bundle-analyzer + lighthouse 자동 실행
+  3. Docker 이미지 빌드 후 크기 체크 자동화 (현재 수동으로 `docker images` 확인)
+  4. 이미지 업로드 API에 대한 부하 테스트 시나리오 자동 생성
+
+### HARNESS-036: design-qa/ui-builder가 dev 서버 없으면 동작 불가 — 자동 시작해야 함
+- **Status**: Open
+- **Priority**: P1
+- **Description**: design-qa 에이전트와 ui-builder 에이전트가 시각적 검증을 위해 dev 서버가 필요하지만, 서버가 안 떠있으면 "dev 서버를 먼저 시작하세요"라고 보고하고 중단. 에이전트가 직접 `npm run dev`를 실행하고, 포트가 열릴 때까지 대기한 후 작업을 진행해야 함. "서버가 없어서 못 합니다"는 에이전트로서 실격.
+- **근본 원인**: 에이전트가 환경 준비를 자기 책임으로 인식하지 않음. `infra-prep.sh`와의 연동도 없음.
+- **Action**:
+  1. design-qa/ui-builder 에이전트 워크플로우 첫 단계에 "dev 서버 자동 시작" 추가
+  2. `npm run dev &` → `curl --retry 10 --retry-delay 2 http://localhost:3000` 패턴으로 서버 대기
+  3. 작업 완료 후 자동으로 서버 프로세스 종료
+  4. `infra-prep.sh`에 "dev 서버 상태 체크 + 자동 시작" 기능 추가
+  5. 포트 충돌 시 자동으로 다른 포트(3001, 3002...) 시도
+
+### HARNESS-037: 배포 계정/시크릿이 코드/대화에 노출 — .env 기반 관리 필수
+- **Status**: Open
+- **Priority**: P0
+- **Description**: Dokploy, Supabase, Slack 등 외부 서비스 계정 정보가 대화 내에서 전달되거나 코드에 하드코딩될 위험. 모든 인증 정보는 .env 파일로 관리하고, 에이전트가 직접 접근해야 함. 대화에서 받은 계정 정보는 즉시 .env에 저장하고 이후 .env에서만 참조.
+- **원칙**:
+  1. 모든 외부 서비스 계정은 `.env` 또는 `.env.local`에 저장
+  2. 에이전트는 코드에 계정 정보를 절대 하드코딩하지 않음
+  3. CI/CD 시크릿은 GitHub Secrets 또는 Dokploy 환경변수로 관리
+  4. 대화에서 전달된 시크릿은 1회 사용 후 .env에 저장, 이후 .env에서만 읽음
+- **Action**:
+  1. `.env.deploy` 파일 생성 — 배포 관련 시크릿 (Dokploy URL, 계정 등)
+  2. `.gitignore`에 `.env.deploy` 추가 (이미 `.env*` 패턴으로 포함되어 있어야 함)
+  3. 배포 스크립트가 `.env.deploy`에서 읽어서 사용하도록 구현
+  4. `env-manager.sh`에 배포 시크릿 카테고리 추가

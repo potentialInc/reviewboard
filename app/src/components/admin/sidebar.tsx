@@ -26,7 +26,7 @@ export function AdminSidebar() {
       {/* Logo header */}
       <div className="h-16 flex items-center gap-2 px-6 border-b border-white/5">
         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white flex-shrink-0">
-          <Layers className="w-5 h-5" />
+          <Layers className="w-5 h-5" aria-hidden="true" />
         </div>
         <span className="font-jakarta text-lg font-bold text-white tracking-tight">ReviewBoard</span>
         <button
@@ -54,7 +54,7 @@ export function AdminSidebar() {
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
             >
-              <item.icon className={`w-5 h-5 transition-colors ${!isActive ? 'group-hover:text-primary' : ''}`} />
+              <item.icon className={`w-5 h-5 transition-colors ${!isActive ? 'group-hover:text-primary' : ''}`} aria-hidden="true" />
               {item.label}
             </Link>
           );
@@ -65,11 +65,11 @@ export function AdminSidebar() {
       <div className="p-4 border-t border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            A
+            AD
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">Admin User</p>
-            <p className="text-xs text-gray-500 truncate">admin</p>
+            <p className="text-xs text-slate-500 truncate">dev@reviewboard.io</p>
           </div>
           <button
             onClick={handleLogout}

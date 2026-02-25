@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import { createServiceSupabase } from '@/lib/supabase/server';
 import { getSession, isAdmin } from '@/lib/auth';
+import { getOpenFeedbackCountByProject } from '@/lib/feedback-count';
+import { sanitizeText } from '@/lib/validation';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // GET /api/projects — list all projects (admin) or assigned projects (client)
 export async function GET() {
@@ -19,76 +23,36 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (listErr) {
-      return NextResponse.json({ error: listErr.message }, { status: 500 });
+      console.error('[projects/GET]', listErr.message);
+      return NextResponse.json({ error: 'Failed to load projects' }, { status: 500 });
     }
 
-    // Fetch client accounts separately (avoids ambiguous FK with client_account_projects)
+    // Fetch client accounts and open feedback counts in parallel
     const projectIds = (projects || []).map((p) => p.id);
-    const { data: clientAccounts } = projectIds.length > 0
-      ? await supabase
-          .from('client_accounts')
-          .select('project_id, login_id')
-          .in('project_id', projectIds)
-      : { data: [] };
+    const [{ data: capLinks }, openCountByProject] = await Promise.all([
+      projectIds.length > 0
+        ? supabase
+            .from('client_account_projects')
+            .select('project_id, client_accounts(login_id)')
+            .in('project_id', projectIds)
+        : Promise.resolve({ data: [] as { project_id: string; client_accounts: { login_id: string } | { login_id: string }[] | null }[] }),
+      getOpenFeedbackCountByProject(supabase, projects || []),
+    ]);
 
-    // Batch: collect all screen IDs across all projects
-    const allScreenIds = (projects || []).flatMap(
-      (p) => (p.screens || []).map((s: { id: string }) => s.id)
-    );
-
-    // Batch: get screenshot_version → screen mapping in one query
-    const svToScreen: Record<string, string> = {};
-    if (allScreenIds.length > 0) {
-      const { data: svData } = await supabase
-        .from('screenshot_versions')
-        .select('id, screen_id')
-        .in('screen_id', allScreenIds);
-      for (const sv of svData || []) {
-        svToScreen[sv.id] = sv.screen_id;
-      }
+    // Build project_id -> login_id mapping
+    const clientIdByProject: Record<string, string> = {};
+    for (const link of capLinks || []) {
+      const acc = link.client_accounts as { login_id: string } | { login_id: string }[] | null;
+      const loginId = Array.isArray(acc) ? acc[0]?.login_id : acc?.login_id;
+      if (loginId) clientIdByProject[link.project_id] = loginId;
     }
 
-    // Batch: count open comments in one query
-    const openCountByScreen: Record<string, number> = {};
-    const allSvIds = Object.keys(svToScreen);
-    if (allSvIds.length > 0) {
-      const { data: openComments } = await supabase
-        .from('comments')
-        .select('screenshot_version_id')
-        .eq('status', 'open')
-        .in('screenshot_version_id', allSvIds);
-      for (const c of openComments || []) {
-        const screenId = svToScreen[c.screenshot_version_id];
-        openCountByScreen[screenId] = (openCountByScreen[screenId] || 0) + 1;
-      }
-    }
-
-    // Build screen → project mapping for aggregation
-    const screenToProject: Record<string, string> = {};
-    for (const p of projects || []) {
-      for (const s of p.screens || []) {
-        screenToProject[(s as { id: string }).id] = p.id;
-      }
-    }
-
-    // Aggregate open feedback per project
-    const openCountByProject: Record<string, number> = {};
-    for (const [screenId, count] of Object.entries(openCountByScreen)) {
-      const pid = screenToProject[screenId];
-      if (pid) openCountByProject[pid] = (openCountByProject[pid] || 0) + count;
-    }
-
-    const enriched = (projects || []).map((p) => {
-      const clientAcc = (clientAccounts || []).find(
-        (c: { project_id: string }) => c.project_id === p.id
-      );
-      return {
-        ...p,
-        client_id: clientAcc?.login_id || null,
-        screen_count: p.screens?.length || 0,
-        open_feedback_count: openCountByProject[p.id] || 0,
-      };
-    });
+    const enriched = (projects || []).map((p) => ({
+      ...p,
+      client_id: clientIdByProject[p.id] || null,
+      screen_count: p.screens?.length || 0,
+      open_feedback_count: openCountByProject[p.id] || 0,
+    }));
 
     return NextResponse.json(enriched);
   }
@@ -100,9 +64,6 @@ export async function GET() {
     .eq('client_account_id', session.id);
 
   const projectIds = links?.map((l) => l.project_id) || [];
-  if (session.project_id && !projectIds.includes(session.project_id)) {
-    projectIds.push(session.project_id);
-  }
 
   if (projectIds.length === 0) {
     return NextResponse.json([]);
@@ -114,48 +75,7 @@ export async function GET() {
     .in('id', projectIds)
     .order('updated_at', { ascending: false });
 
-  // Batch: collect all screen IDs
-  const allScreenIds = (projects || []).flatMap(
-    (p) => (p.screens || []).map((s: { id: string }) => s.id)
-  );
-
-  const svToScreen: Record<string, string> = {};
-  if (allScreenIds.length > 0) {
-    const { data: svData } = await supabase
-      .from('screenshot_versions')
-      .select('id, screen_id')
-      .in('screen_id', allScreenIds);
-    for (const sv of svData || []) {
-      svToScreen[sv.id] = sv.screen_id;
-    }
-  }
-
-  const openCountByScreen: Record<string, number> = {};
-  const allSvIds = Object.keys(svToScreen);
-  if (allSvIds.length > 0) {
-    const { data: openComments } = await supabase
-      .from('comments')
-      .select('screenshot_version_id')
-      .eq('status', 'open')
-      .in('screenshot_version_id', allSvIds);
-    for (const c of openComments || []) {
-      const screenId = svToScreen[c.screenshot_version_id];
-      openCountByScreen[screenId] = (openCountByScreen[screenId] || 0) + 1;
-    }
-  }
-
-  const screenToProject: Record<string, string> = {};
-  for (const p of projects || []) {
-    for (const s of p.screens || []) {
-      screenToProject[(s as { id: string }).id] = p.id;
-    }
-  }
-
-  const openCountByProject: Record<string, number> = {};
-  for (const [screenId, count] of Object.entries(openCountByScreen)) {
-    const pid = screenToProject[screenId];
-    if (pid) openCountByProject[pid] = (openCountByProject[pid] || 0) + count;
-  }
+  const openCountByProject = await getOpenFeedbackCountByProject(supabase, projects || []);
 
   const enriched = (projects || []).map((p) => ({
     ...p,
@@ -173,7 +93,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { name, slack_channel } = await request.json();
+  // SECURITY: Rate limit project creation (10 per minute)
+  if (!checkRateLimit(`project-create:${session.id}`, 10, 60_000)) {
+    return NextResponse.json(
+      { error: 'Too many project creation requests. Please wait.' },
+      { status: 429 }
+    );
+  }
+
+  let body: { name?: string; slack_channel?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // SECURITY: Sanitize project name to prevent stored XSS
+  const name = body.name ? sanitizeText(body.name, 255) : '';
+  const slack_channel = body.slack_channel ? sanitizeText(body.slack_channel, 255) : undefined;
   if (!name) {
     return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
   }
@@ -188,19 +125,24 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[projects/POST]', error.message);
+    return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });
   }
 
-  // Auto-provision client account
+  // Auto-provision client account with random password
   const randomNum = Math.floor(1000 + Math.random() * 9000);
   const loginId = `${name.replace(/\s+/g, '')}${randomNum}`;
+  const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(12)))
+    .map(b => b.toString(36).padStart(2, '0'))
+    .join('')
+    .slice(0, 16);
 
+  const hashedPassword = await bcrypt.hash(randomPassword, 12);
   const { data: account } = await supabase
     .from('client_accounts')
     .insert({
-      project_id: project.id,
       login_id: loginId,
-      password: 'Potential',
+      password: hashedPassword,
     })
     .select()
     .single();
@@ -213,11 +155,12 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // Return credentials once — admin should share these securely with the client
   return NextResponse.json({
     project,
     client_account: {
       login_id: loginId,
-      password: 'Potential',
+      initial_password: randomPassword,
     },
   }, { status: 201 });
 }

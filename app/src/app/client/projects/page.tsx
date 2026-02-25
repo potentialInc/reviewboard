@@ -2,9 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { FolderKanban, Monitor, MessageSquare, AlertCircle, RefreshCw } from 'lucide-react';
+import { FolderKanban, Monitor, MessageSquare, AlertCircle, RefreshCw, ImageIcon } from 'lucide-react';
 import { CardSkeleton } from '@/components/ui/skeleton';
-import { CountBadge } from '@/components/ui/badge';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 
 interface ProjectItem {
@@ -92,25 +91,23 @@ export default function ClientProjectsPage() {
             href={`/client/projects/${p.id}/screens`}
             className="relative overflow-hidden bg-card rounded-2xl border border-border p-6 hover:shadow-xl hover:border-primary/30 transition-all duration-300 group"
           >
-            <div className="absolute top-0 left-0 w-1 h-full bg-primary rounded-l-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center">
-                <FolderKanban className="w-6 h-6 text-primary" />
+              <div className="w-12 h-12 rounded-xl bg-indigo-50 text-primary flex items-center justify-center">
+                <Monitor className="w-6 h-6" />
               </div>
-              {p.open_feedback_count > 0 && (
-                <CountBadge count={p.open_feedback_count} variant="danger" />
-              )}
+              <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200">Active</span>
             </div>
-            <h3 className="text-lg font-bold font-jakarta group-hover:text-primary transition-colors">{p.name}</h3>
-            <div className="flex items-center gap-4 mt-4 border-t border-slate-100 pt-4 text-sm text-muted">
-              <span className="flex items-center gap-1">
-                <Monitor className="w-4 h-4" /> {p.screen_count} screens
+            <h3 className="text-lg font-bold font-jakarta text-slate-900 group-hover:text-primary transition-colors">{p.name}</h3>
+            <div className="flex items-center justify-between mt-4 border-t border-slate-100 pt-4 text-sm text-slate-600">
+              <span className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-slate-400" /> {p.screen_count} Screens
               </span>
-              <span className="flex items-center gap-1">
-                <MessageSquare className="w-4 h-4" /> {p.open_feedback_count} open
+              <span className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-slate-400" /> {p.open_feedback_count} Open Items
               </span>
             </div>
-            <p className="text-xs text-gray-400 mt-4">
+            <p className="text-xs text-slate-400 mt-4">
               Updated {new Date(p.updated_at).toLocaleDateString()}
             </p>
           </Link>

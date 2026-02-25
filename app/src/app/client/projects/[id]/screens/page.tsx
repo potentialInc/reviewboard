@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, Monitor, MessageSquare, AlertCircle, RefreshCw } from 'lucide-react';
 import { CardSkeleton } from '@/components/ui/skeleton';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
@@ -87,19 +88,22 @@ export default function ClientScreenListPage() {
 
       <Link
         href="/client/projects"
-        className="inline-flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors text-muted mb-4"
+        className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-primary mb-4 transition-colors"
       >
-        <ArrowLeft className="w-5 h-5" />
-        <span className="text-sm">Back to Projects</span>
+        <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+        Back to Projects
       </Link>
 
-      <h1 className="text-2xl font-bold font-jakarta">{project.name}</h1>
-
-      <div className="flex items-center gap-4 text-sm text-muted mb-8">
-        <span>{project.screens.length} {project.screens.length === 1 ? 'screen' : 'screens'}</span>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold font-jakarta text-slate-900">{project.name}</h1>
+          <div className="flex items-center gap-3 mt-2 text-sm text-slate-500">
+            <span>{project.screens.length} {project.screens.length === 1 ? 'Screen' : 'Screens'}</span>
+          </div>
+        </div>
         {totalOpenFeedback > 0 && (
-          <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md border border-red-400">
-            {totalOpenFeedback} open
+          <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 shadow-sm">
+            {totalOpenFeedback} Open Feedbacks
           </span>
         )}
       </div>
@@ -116,14 +120,16 @@ export default function ClientScreenListPage() {
             <Link
               key={s.id}
               href={`/client/projects/${id}/screens/${s.id}`}
-              className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-lg transition-all group"
+              className="bg-card rounded-xl border border-border overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group"
             >
               <div className="aspect-[9/16] bg-gray-100 relative overflow-hidden">
                 {s.latest_version ? (
-                  <img
+                  <Image
                     src={s.latest_version.image_url}
                     alt={s.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-400">
@@ -138,17 +144,16 @@ export default function ClientScreenListPage() {
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="bg-white/90 text-foreground px-4 py-2 rounded-full text-sm font-medium translate-y-2 group-hover:translate-y-0 transition-all">
+                  <span className="px-4 py-2 bg-white rounded-full text-sm font-semibold text-slate-900 shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
                     View Design
                   </span>
                 </div>
               </div>
               <div className="border-t border-slate-100 p-4">
-                <h3 className="font-medium group-hover:text-primary transition-colors">{s.name}</h3>
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted">
-                  <MessageSquare className="w-4 h-4" />
-                  <span>{s.open_feedback_count} open feedback</span>
-                </div>
+                <h3 className="font-medium text-slate-900 truncate group-hover:text-primary transition-colors">{s.name}</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {s.latest_version ? `Version ${s.latest_version.version}` : 'No version uploaded'}
+                </p>
               </div>
             </Link>
           ))}

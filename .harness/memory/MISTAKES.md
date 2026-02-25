@@ -40,4 +40,40 @@ Record mistakes here so agents don't repeat them. Check this file before fixing 
 
 ---
 
+### Mistake: $SCRIPT_DIR undefined in multiple harness scripts
+- **Date**: 2026-02-25
+- **What happened**: Several harness scripts (config-validator.sh, phase-validator.sh, prd-resolver.sh) used `$SCRIPT_DIR` without defining it, causing `unbound variable` errors with `set -euo pipefail`.
+- **Root cause**: Some scripts were written assuming a global `SCRIPT_DIR` variable would be available, or were copy-pasted from a template that defined it differently.
+- **Fix**: Added `HARNESS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"` to each script and replaced `$SCRIPT_DIR` references with `$HARNESS_ROOT` or `$PROJECT_ROOT` as appropriate.
+- **Prevention**: Every shell script must define its own directory variables at the top. Never assume inherited shell variables. Use `HARNESS_ROOT` for paths within `.harness/` and `PROJECT_ROOT` for the git repo root.
+
+---
+
+### Mistake: `local` keyword used outside function in bash case block
+- **Date**: 2026-02-25
+- **What happened**: phase-validator.sh used `local test_count` inside a `case` block (test phase), which fails because `local` is only valid inside functions.
+- **Root cause**: The `case` block was treated like a function body, but it's just a conditional branch.
+- **Fix**: Removed the `local` keyword and used a plain variable assignment.
+- **Prevention**: Only use `local` inside function definitions. In case blocks, use regular variable assignments.
+
+---
+
+### Mistake: vi.mock hoisting in vitest causes ReferenceError
+- **Date**: 2026-02-25
+- **What happened**: Tests using `const mockFn = vi.fn()` before `vi.mock()` factory functions that reference `mockFn` fail with "Cannot access before initialization".
+- **Root cause**: `vi.mock()` calls are hoisted to the top of the file by vitest's transform. When the factory function references a `const` variable, that variable doesn't exist yet at hoist time.
+- **Fix**: Use `vi.hoisted()` to define mock variables that need to be available during hoisting: `const { mockFn } = vi.hoisted(() => ({ mockFn: vi.fn() }))`.
+- **Prevention**: Always use `vi.hoisted()` when mock variables are referenced inside `vi.mock()` factory functions.
+
+---
+
+### Mistake: Tests fail after removing hardcoded secret fallback
+- **Date**: 2026-02-25
+- **What happened**: After removing the hardcoded `SESSION_SECRET` fallback in auth.ts (security fix C-01), session tests broke because the test environment didn't have `SESSION_SECRET` set.
+- **Root cause**: Security hardening removed the fallback but test setup didn't provide the environment variable.
+- **Fix**: Added `process.env.SESSION_SECRET = 'test-...'` (32+ chars) in the test setup file.
+- **Prevention**: When removing environment variable fallbacks, always update test setup files to provide the required values.
+
+---
+
 <!-- Add new mistakes below -->

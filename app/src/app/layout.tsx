@@ -22,7 +22,12 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <a href="#main-content" className="skip-to-content">
+          Skip to content
+        </a>
+        <div id="main-content">{children}</div>
+      </body>
     </html>
   );
 }

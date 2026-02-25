@@ -13,7 +13,7 @@ export default async function ClientLayout({ children }: { children: React.React
     <ToastProvider>
       <div className="min-h-screen">
         <ClientNavbar />
-        <main className="pt-16 px-6 py-10 max-w-6xl mx-auto">{children}</main>
+        <main className="px-6 py-10 max-w-7xl mx-auto">{children}</main>
       </div>
     </ToastProvider>
   );

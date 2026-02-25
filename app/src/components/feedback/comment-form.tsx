@@ -33,8 +33,8 @@ export function CommentForm({ x, y, onSubmit, onCancel }: CommentFormProps) {
     >
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-semibold text-foreground">Add Feedback</span>
-        <button onClick={onCancel} className="p-1 rounded hover:bg-gray-100">
-          <X className="w-4 h-4 text-muted" />
+        <button onClick={onCancel} className="p-1 rounded hover:bg-gray-100" aria-label="Cancel feedback">
+          <X className="w-4 h-4 text-muted" aria-hidden="true" />
         </button>
       </div>
       <form onSubmit={handleSubmit}>
@@ -42,6 +42,7 @@ export function CommentForm({ x, y, onSubmit, onCancel }: CommentFormProps) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Describe the issue or suggestion..."
+          aria-label="Feedback description"
           className="w-full px-3 py-2 rounded-lg border border-border text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           rows={3}
           autoFocus

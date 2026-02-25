@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabase } from '@/lib/supabase/server';
 import { getSession, isAdmin, hasProjectAccess } from '@/lib/auth';
+import { validateUUID, sanitizeText } from '@/lib/validation';
+import { getOpenFeedbackCountByScreen } from '@/lib/feedback-count';
 
 // GET /api/projects/[id]
 export async function GET(
@@ -8,6 +10,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const uuidErr = validateUUID(id);
+  if (uuidErr) return uuidErr;
+
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -41,48 +46,33 @@ export async function GET(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  // Fetch client account separately (avoids ambiguous FK with client_account_projects)
-  const { data: clientAccounts } = await supabase
-    .from('client_accounts')
-    .select('login_id, password')
-    .eq('project_id', id)
-    .limit(1);
+  interface ScreenWithVersions { id: string; name: string; screenshot_versions?: { id: string; version: number; image_url: string; created_at: string }[] }
+  const typedScreens = (project.screens as ScreenWithVersions[] || []);
 
-  // Batch: collect all screenshot_version IDs across all screens
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const allSvIds = (project.screens || []).flatMap((s: any) =>
-    (s.screenshot_versions || []).map((sv: { id: string }) => sv.id)
-  );
+  // Fetch client account and open feedback counts in parallel
+  const [{ data: capLinks }, openCountByScreen] = await Promise.all([
+    supabase
+      .from('client_account_projects')
+      .select('client_accounts(login_id)')
+      .eq('project_id', id)
+      .limit(1),
+    getOpenFeedbackCountByScreen(supabase, typedScreens),
+  ]);
 
-  // Batch: count open comments per screenshot_version in one query
-  const openCountBySv: Record<string, number> = {};
-  if (allSvIds.length > 0) {
-    const { data: openComments } = await supabase
-      .from('comments')
-      .select('screenshot_version_id')
-      .eq('status', 'open')
-      .in('screenshot_version_id', allSvIds);
-    for (const c of openComments || []) {
-      openCountBySv[c.screenshot_version_id] = (openCountBySv[c.screenshot_version_id] || 0) + 1;
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const screens = (project.screens || []).map((screen: any) => {
-    const svIds = (screen.screenshot_versions || []).map((sv: { id: string }) => sv.id);
-    const openCount = svIds.reduce((sum: number, svId: string) => sum + (openCountBySv[svId] || 0), 0);
+  const screens = typedScreens.map((screen) => {
     const sorted = [...(screen.screenshot_versions || [])].sort(
-      (a: { version: number }, b: { version: number }) => b.version - a.version
+      (a, b) => b.version - a.version
     );
-    return { ...screen, latest_version: sorted[0] || null, open_feedback_count: openCount };
+    return { ...screen, latest_version: sorted[0] || null, open_feedback_count: openCountByScreen[screen.id] || 0 };
   });
 
-  const clientAcc = clientAccounts?.[0] || null;
+  const capLink = capLinks?.[0];
+  const clientAcc = capLink?.client_accounts as { login_id: string } | { login_id: string }[] | null;
+  const clientLoginId = Array.isArray(clientAcc) ? clientAcc[0]?.login_id : clientAcc?.login_id;
   return NextResponse.json({
     ...project,
     screens,
-    client_id: clientAcc?.login_id || null,
-    client_password: clientAcc?.password || 'Potential',
+    client_id: clientLoginId || null,
   });
 }
 
@@ -92,17 +82,26 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const patchUuidErr = validateUUID(id);
+  if (patchUuidErr) return patchUuidErr;
+
   const session = await getSession();
   if (!session || !isAdmin(session)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await request.json();
+  let body: { name?: string; slack_channel?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
   const supabase = await createServiceSupabase();
 
+  // SECURITY: Sanitize inputs to prevent stored XSS
   const updates: Record<string, string> = {};
-  if (body.name !== undefined) updates.name = body.name;
-  if (body.slack_channel !== undefined) updates.slack_channel = body.slack_channel;
+  if (body.name !== undefined) updates.name = sanitizeText(body.name, 255);
+  if (body.slack_channel !== undefined) updates.slack_channel = sanitizeText(body.slack_channel, 255);
 
   const { data, error } = await supabase
     .from('projects')
@@ -111,7 +110,10 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[projects/PATCH]', error.message);
+    return NextResponse.json({ error: 'Failed to update project' }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
@@ -121,6 +123,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const delUuidErr = validateUUID(id);
+  if (delUuidErr) return delUuidErr;
+
   const session = await getSession();
   if (!session || !isAdmin(session)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -129,6 +134,9 @@ export async function DELETE(
   const supabase = await createServiceSupabase();
   const { error } = await supabase.from('projects').delete().eq('id', id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[projects/DELETE]', error.message);
+    return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

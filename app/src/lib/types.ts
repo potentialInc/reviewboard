@@ -10,11 +10,9 @@ export interface Project {
 
 export interface ClientAccount {
   id: string;
-  project_id: string | null;
   login_id: string;
   password: string;
   created_at: string;
-  project?: Project;
   projects?: Project[];
 }
 
@@ -83,5 +81,54 @@ export interface SessionUser {
   type: 'admin' | 'client';
   id: string;
   login_id: string;
-  project_id?: string;
+}
+
+/** Admin project list item */
+export interface ProjectListItem {
+  id: string;
+  name: string;
+  client_id: string | null;
+  screen_count: number;
+  open_feedback_count: number;
+  slack_channel: string | null;
+  created_at: string;
+}
+
+/** Screen with versions and feedback count (used in project detail) */
+export interface ScreenItem {
+  id: string;
+  name: string;
+  latest_version?: { image_url: string; version: number };
+  open_feedback_count: number;
+  screenshot_versions: ScreenshotVersion[];
+}
+
+/** Project detail (used in admin project detail page) */
+export interface ProjectDetail {
+  id: string;
+  name: string;
+  slack_channel: string | null;
+  client_id: string | null;
+  screens: ScreenItem[];
+  created_at: string;
+}
+
+/** Feedback list item (used in admin feedback page) */
+export interface FeedbackListItem {
+  id: string;
+  pin_number: number;
+  x: number;
+  y: number;
+  text: string;
+  author_id: string;
+  status: FeedbackStatus;
+  created_at: string;
+  project_name: string;
+  screen_name: string;
+  reply_count: number;
+  screenshot_version?: {
+    image_url: string;
+    screen?: { name: string };
+  };
+  replies?: Reply[];
 }
