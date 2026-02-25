@@ -8,6 +8,9 @@ export function validateEnv() {
   if (validated) return;
   validated = true;
 
+  // Skip during build phase (next build collects page data without runtime env)
+  if (process.env.NEXT_PHASE === 'phase-production-build') return;
+
   const required = [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
