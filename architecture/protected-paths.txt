@@ -1,0 +1,12 @@
+# Protected paths — agent edits are blocked for these prefixes.
+# Managed by humans only. Used by:
+#   - cli/src/core/rules.ts (TypeScript fallback)
+#   - hooks/pre-edit-arch-check.sh (Shell fallback)
+#   - architecture/enforce.sh (CI enforcement)
+#
+# One path per line. Trailing / means directory prefix match.
+harness/
+hooks/
+architecture/
+.claude/
+CLAUDE.md

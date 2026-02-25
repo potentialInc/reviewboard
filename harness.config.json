@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "safeMode": true,
+  "restrictions": {
+    "maxParallelAgents": 5,
+    "autoFixRetries": 3,
+    "requireConfirmation": [
+      "deploy",
+      "deploy:preview",
+      "deploy:promote",
+      "db",
+      "db:migrate",
+      "db:seed",
+      "db:reset",
+      "secure"
+    ]
+  }
+}

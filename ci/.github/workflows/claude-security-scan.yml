@@ -1,0 +1,156 @@
+name: Claude Security Scan
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Every Monday at 09:00 UTC
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect stack
+        id: detect
+        run: |
+          STACK="unknown"
+
+          if [ -f "package.json" ] || [ -f "package-lock.json" ]; then
+            STACK="node"
+          elif [ -f "requirements.txt" ] || [ -f "Pipfile" ] || [ -f "pyproject.toml" ]; then
+            STACK="python"
+          fi
+
+          echo "stack=$STACK" >> "$GITHUB_OUTPUT"
+          echo "Detected stack: $STACK"
+
+      - name: Setup Node.js
+        if: steps.detect.outputs.stack == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run npm audit
+        if: steps.detect.outputs.stack == 'node'
+        id: npm_audit
+        run: |
+          npm install --package-lock-only 2>/dev/null || true
+          AUDIT_OUTPUT=$(npm audit --json 2>/dev/null || true)
+          VULN_COUNT=$(echo "$AUDIT_OUTPUT" | jq '.metadata.vulnerabilities.total // 0' 2>/dev/null || echo "0")
+
+          echo "vuln_count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
+          {
+            echo "audit_report<<AUDIT_EOF"
+            npm audit 2>/dev/null || echo "No audit data available"
+            echo "AUDIT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Found $VULN_COUNT vulnerabilities"
+
+      - name: Setup Python
+        if: steps.detect.outputs.stack == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run pip audit
+        if: steps.detect.outputs.stack == 'python'
+        id: pip_audit
+        run: |
+          pip install pip-audit
+          AUDIT_OUTPUT=$(pip-audit 2>&1 || true)
+          VULN_COUNT=$(echo "$AUDIT_OUTPUT" | grep -c "^Name" || echo "0")
+
+          # If pip-audit found vulnerabilities it exits non-zero
+          if echo "$AUDIT_OUTPUT" | grep -q "No known vulnerabilities found"; then
+            VULN_COUNT=0
+          else
+            VULN_COUNT=$(echo "$AUDIT_OUTPUT" | grep -cE "^\S+\s+\S+\s+\S+" || echo "0")
+          fi
+
+          echo "vuln_count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
+          {
+            echo "audit_report<<AUDIT_EOF"
+            echo "$AUDIT_OUTPUT"
+            echo "AUDIT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Found $VULN_COUNT vulnerabilities"
+
+      - name: Create issue for vulnerabilities (scheduled run)
+        if: |
+          github.event_name == 'schedule' &&
+          (
+            (steps.detect.outputs.stack == 'node' && steps.npm_audit.outputs.vuln_count != '0') ||
+            (steps.detect.outputs.stack == 'python' && steps.pip_audit.outputs.vuln_count != '0')
+          )
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const stack = '${{ steps.detect.outputs.stack }}';
+            const auditReport = stack === 'node'
+              ? `${{ steps.npm_audit.outputs.audit_report }}`
+              : `${{ steps.pip_audit.outputs.audit_report }}`;
+            const vulnCount = stack === 'node'
+              ? '${{ steps.npm_audit.outputs.vuln_count }}'
+              : '${{ steps.pip_audit.outputs.vuln_count }}';
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Security: ${vulnCount} vulnerabilities found in ${stack} dependencies`,
+              body: `## Weekly Security Scan Results\n\n` +
+                    `**Stack:** ${stack}\n` +
+                    `**Vulnerabilities found:** ${vulnCount}\n\n` +
+                    `### Audit Report\n\`\`\`\n${auditReport.substring(0, 3000)}\n\`\`\`\n\n` +
+                    `Add the \`claude\` label to this issue to trigger an automatic fix attempt.`,
+              labels: ['security', 'claude']
+            });
+
+      - name: Claude auto-fix vulnerabilities (PR run)
+        if: |
+          github.event_name == 'pull_request' &&
+          (
+            (steps.detect.outputs.stack == 'node' && steps.npm_audit.outputs.vuln_count != '0') ||
+            (steps.detect.outputs.stack == 'python' && steps.pip_audit.outputs.vuln_count != '0')
+          )
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Security vulnerabilities were found in the project dependencies.
+
+            Stack: ${{ steps.detect.outputs.stack }}
+
+            Audit report:
+            ${{ steps.detect.outputs.stack == 'node' && steps.npm_audit.outputs.audit_report || steps.pip_audit.outputs.audit_report }}
+
+            Please:
+            1. Analyze the vulnerabilities
+            2. Update dependencies to fix them where possible (prefer non-breaking updates)
+            3. For any vulnerabilities that cannot be auto-fixed, add a comment explaining the risk and recommended action
+            4. Run the audit again to verify fixes
+
+            Read CLAUDE.md for project conventions.
+          direct_prompt: true
+
+      - name: Report clean scan
+        if: |
+          (steps.detect.outputs.stack == 'node' && steps.npm_audit.outputs.vuln_count == '0') ||
+          (steps.detect.outputs.stack == 'python' && steps.pip_audit.outputs.vuln_count == '0')
+        run: |
+          echo "No vulnerabilities found. Dependencies are clean."
+
+      - name: Warn about unknown stack
+        if: steps.detect.outputs.stack == 'unknown'
+        run: |
+          echo "WARNING: Could not detect project stack (no package.json, requirements.txt, Pipfile, or pyproject.toml found)."
+          echo "Security scanning was skipped."

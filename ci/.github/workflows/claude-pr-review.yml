@@ -1,0 +1,45 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Architecture Check
+        id: arch_check
+        run: |
+          chmod +x ./architecture/enforce.sh
+          ARCH_OUTPUT=$(./architecture/enforce.sh ./src 2>&1 || true)
+          echo "$ARCH_OUTPUT"
+          {
+            echo "result<<ARCH_EOF"
+            echo "$ARCH_OUTPUT"
+            echo "ARCH_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are a code reviewer. Read CLAUDE.md for project context.
+            Review the PR changes following the reviewer agent guidelines in agents/reviewer.md.
+
+            Architecture check results:
+            ${{ steps.arch_check.outputs.result }}
+
+            Provide structured review with Blockers, Suggestions, and Nitpicks.
+            Include file:line references. Be educational in your feedback.
+          direct_prompt: true

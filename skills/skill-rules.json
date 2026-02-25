@@ -1,0 +1,384 @@
+{
+  "version": "1.0",
+  "description": "Skill trigger rules for claude-harness. Maps keywords and magic commands to agents and modes.",
+  "skills": {
+    "feature-builder": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "agents/feature-builder.md",
+      "magicKeyword": "build:",
+      "promptTriggers": {
+        "keywords": ["implement", "create", "add feature", "new module", "new endpoint", "new component", "build"],
+        "intentPatterns": ["(implement|create|add|build).*(feature|module|endpoint|component|page|service)"]
+      }
+    },
+    "bug-fixer": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "agents/bug-fixer.md",
+      "magicKeyword": "fix:",
+      "promptTriggers": {
+        "keywords": ["bug", "error", "broken", "crash", "fail", "fix", "issue", "not working"],
+        "intentPatterns": ["(fix|resolve|debug|diagnose).*(bug|error|issue|crash|failure)"]
+      }
+    },
+    "test-writer": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "medium",
+      "file": "agents/test-writer.md",
+      "magicKeyword": "test:",
+      "promptTriggers": {
+        "keywords": ["test", "coverage", "spec", "assert", "verify", "validate", "unit test"],
+        "intentPatterns": ["(write|add|create).*(test|spec|coverage)", "(test|check).*(coverage|quality)"]
+      }
+    },
+    "refactorer": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "medium",
+      "file": "agents/refactorer.md",
+      "magicKeyword": "refactor:",
+      "promptTriggers": {
+        "keywords": ["refactor", "clean", "split", "extract", "reorganize", "simplify", "restructure"],
+        "intentPatterns": ["(refactor|clean|reorganize|simplify|restructure)"]
+      }
+    },
+    "reviewer": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "medium",
+      "file": "agents/reviewer.md",
+      "magicKeyword": "review:",
+      "promptTriggers": {
+        "keywords": ["review", "check", "audit", "inspect", "code review", "pr review"],
+        "intentPatterns": ["(review|audit|inspect).*(code|change|pr|implementation)"]
+      }
+    },
+    "architecture": {
+      "type": "skill",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "architecture/ARCHITECTURE.md",
+      "magicKeyword": "arch:",
+      "promptTriggers": {
+        "keywords": ["architecture", "layer", "dependency", "import", "module boundary", "circular"],
+        "intentPatterns": ["(check|enforce|validate).*(architecture|layer|dependency|import)"]
+      }
+    },
+    "parallel-mode": {
+      "type": "mode",
+      "enforcement": "require",
+      "priority": "medium",
+      "file": "orchestration/modes/parallel.md",
+      "magicKeyword": "parallel:",
+      "promptTriggers": {
+        "keywords": ["parallel", "simultaneous", "concurrent", "at the same time", "multiple tasks"],
+        "intentPatterns": ["(run|execute|do).*(parallel|simultaneous|concurrent)"]
+      }
+    },
+    "pipeline-mode": {
+      "type": "mode",
+      "enforcement": "require",
+      "priority": "medium",
+      "file": "orchestration/modes/pipeline.md",
+      "magicKeyword": "pipeline:",
+      "promptTriggers": {
+        "keywords": ["pipeline", "phases", "sequential", "step by step", "stages"],
+        "intentPatterns": ["(start|run|execute).*(pipeline|phases|stages)"]
+      }
+    },
+    "team-mode": {
+      "type": "mode",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "orchestration/modes/team.md",
+      "magicKeyword": "team:",
+      "promptTriggers": {
+        "keywords": ["team", "sprint", "backlog", "cycle", "pm", "qa loop", "autopilot"],
+        "intentPatterns": ["(start|run).*(team|sprint|backlog|autopilot)"]
+      }
+    },
+    "fullstack-mode": {
+      "type": "mode",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "orchestration/modes/fullstack.md",
+      "magicKeyword": "fullstack:",
+      "promptTriggers": {
+        "keywords": ["fullstack", "end-to-end", "e2e", "full project", "from scratch", "zero to production"],
+        "intentPatterns": ["(build|create|implement).*(fullstack|end.to.end|e2e|from scratch|complete project)"]
+      }
+    },
+    "devops": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "medium",
+      "file": "agents/devops-agent.md",
+      "magicKeyword": "deploy:",
+      "promptTriggers": {
+        "keywords": ["deploy", "docker", "kubernetes", "k8s", "ci/cd", "infrastructure", "container", "vercel", "aws", "gcp", "terraform", "helm"],
+        "intentPatterns": ["(deploy|setup|configure).*(docker|kubernetes|pipeline|infrastructure|cloud)"]
+      }
+    },
+    "database": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "medium",
+      "file": "agents/database-agent.md",
+      "magicKeyword": "db:",
+      "promptTriggers": {
+        "keywords": ["database", "schema", "migration", "query", "sql", "model", "seed", "orm", "prisma", "sqlalchemy", "drizzle"],
+        "intentPatterns": ["(create|design|modify).*(schema|migration|database|model|seed)"]
+      }
+    },
+    "security": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "agents/security-agent.md",
+      "magicKeyword": "secure:",
+      "promptTriggers": {
+        "keywords": ["security", "vulnerability", "secret", "auth", "permission", "owasp", "xss", "injection", "csrf", "cors"],
+        "intentPatterns": ["(scan|audit|check|review).*(security|vulnerability|secret|auth|permission)"]
+      }
+    },
+    "performance": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "medium",
+      "file": "agents/performance-agent.md",
+      "magicKeyword": "perf:",
+      "promptTriggers": {
+        "keywords": ["performance", "slow", "optimize", "bundle", "profile", "cache", "latency", "memory leak", "n+1"],
+        "intentPatterns": ["(optimize|improve|analyze).*(performance|speed|bundle|cache|latency)"]
+      }
+    },
+    "documentation": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "medium",
+      "file": "agents/documentation-agent.md",
+      "magicKeyword": "docs:",
+      "promptTriggers": {
+        "keywords": ["document", "readme", "api doc", "changelog", "swagger", "openapi", "jsdoc", "architecture diagram"],
+        "intentPatterns": ["(generate|update|create).*(documentation|readme|changelog|api doc|diagram)"]
+      }
+    },
+    "ui-builder": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "agents/ui-builder.md",
+      "magicKeyword": "ui:",
+      "note": "Triggered automatically by design-pipeline (Stage 5) and fullstack Phase 6. Direct use: ui: to implement from existing design assets.",
+      "promptTriggers": {
+        "keywords": ["implement design", "figma", "mockup", "screenshot", "pixel perfect", "wireframe", "ui component", "implement screen"],
+        "intentPatterns": [
+          "(implement|build|create|code).*(figma|mockup|screenshot|ui|screen|layout)",
+          "(translate|convert).*(figma|mockup|html).*(code|component)"
+        ]
+      }
+    },
+    "design-qa": {
+      "type": "agent",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "agents/design-qa.md",
+      "magicKeyword": "design-qa:",
+      "promptTriggers": {
+        "keywords": ["design qa", "visual qa", "fidelity", "pixel perfect", "design check", "compare design", "screen check"],
+        "intentPatterns": [
+          "(check|compare|verify|test).*(design|fidelity|pixel|visual|screen)",
+          "(qa|review).*(design|ui|screen|implementation)"
+        ]
+      }
+    },
+    "prd-normalize": {
+      "type": "skill",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "skills/prd-normalize/SKILL.md",
+      "magicKeyword": "prd:",
+      "promptTriggers": {
+        "keywords": ["normalize prd", "convert prd", "fill prd", "prd template", "standardize prd", "make prd"],
+        "intentPatterns": [
+          "(normalize|convert|standardize|fill).*(prd|requirements|spec)",
+          "(prd|requirements).*(normalize|convert|template|standard)"
+        ]
+      }
+    },
+    "design-pipeline": {
+      "type": "skill",
+      "enforcement": "require",
+      "priority": "high",
+      "file": "skills/design-pipeline/run.md",
+      "magicKeyword": "design:",
+      "promptTriggers": {
+        "keywords": ["design pipeline", "aura", "design prompts", "design guide", "html prototype", "github pages prototype", "generate screens", "prd to design"],
+        "intentPatterns": [
+          "(generate|create|run).*(design pipeline|prototype|aura|html screens)",
+          "(prd|requirements).*(design|prompts|aura|prototype)"
+        ]
+      }
+    },
+    "html-to-react": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "file": "skills/html-to-react/SKILL.md",
+      "promptTriggers": {
+        "keywords": ["html to react", "convert html", "html conversion", "prototype to code", "html prototype"],
+        "intentPatterns": [
+          "(convert|translate|transform).*(html|prototype).*(react|component|code)",
+          "(html|mockup).*(to|into).*(react|component)"
+        ]
+      }
+    },
+    "playwright-cli": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "low",
+      "file": "skills/playwright-cli/SKILL.md",
+      "promptTriggers": {
+        "keywords": ["playwright-cli", "browser qa", "headless browser", "browser automation", "named session"],
+        "intentPatterns": [
+          "(use|run).*(playwright.cli|browser automation)",
+          "(browser|visual).*(test|qa|screenshot)"
+        ]
+      }
+    },
+    "api-docs": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "file": "skills/api-docs/SKILL.md",
+      "promptTriggers": {
+        "keywords": ["api docs", "openapi", "swagger", "api documentation", "endpoint docs"],
+        "intentPatterns": [
+          "(generate|create|update).*(api doc|openapi|swagger)",
+          "(document|describe).*(api|endpoint|route)"
+        ]
+      }
+    },
+    "e2e-gen": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "file": "skills/e2e-gen/SKILL.md",
+      "promptTriggers": {
+        "keywords": ["e2e test", "end-to-end test", "playwright test", "generate e2e", "auto e2e"],
+        "intentPatterns": [
+          "(generate|create|auto).*(e2e|end.to.end|playwright).*(test)",
+          "(e2e|playwright).*(test|spec).*(generate|create|auto)"
+        ]
+      }
+    },
+    "auth-setup": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "high",
+      "file": "templates/auth/nextauth.md",
+      "promptTriggers": {
+        "keywords": ["authentication", "auth setup", "login system", "nextauth", "supabase auth", "jwt auth", "signup"],
+        "intentPatterns": [
+          "(setup|add|implement|create).*(auth|login|signup|authentication)",
+          "(nextauth|supabase.auth|jwt).*(setup|config|implement)"
+        ]
+      }
+    },
+    "monitoring-setup": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "file": "templates/monitoring/observability.md",
+      "promptTriggers": {
+        "keywords": ["monitoring", "sentry", "logging", "observability", "error tracking", "health check"],
+        "intentPatterns": [
+          "(setup|add|configure).*(monitoring|sentry|logging|observability|error tracking)",
+          "(health.check|error.tracking).*(setup|add)"
+        ]
+      }
+    },
+    "payment-setup": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "file": "templates/integrations/payments.md",
+      "promptTriggers": {
+        "keywords": ["payment", "stripe", "billing", "subscription", "checkout", "invoice"],
+        "intentPatterns": [
+          "(setup|add|integrate).*(payment|stripe|billing|subscription|checkout)",
+          "(stripe|payment).*(webhook|integration|setup)"
+        ]
+      }
+    },
+    "email-setup": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "low",
+      "file": "templates/integrations/email.md",
+      "promptTriggers": {
+        "keywords": ["email", "notification", "resend", "sendgrid", "push notification", "smtp"],
+        "intentPatterns": [
+          "(setup|add|send).*(email|notification|smtp)",
+          "(email|notification).*(template|service|setup)"
+        ]
+      }
+    },
+    "i18n-setup": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "low",
+      "file": "templates/i18n/setup.md",
+      "promptTriggers": {
+        "keywords": ["i18n", "internationalization", "localization", "multi-language", "translation", "locale"],
+        "intentPatterns": [
+          "(setup|add|enable).*(i18n|internationalization|localization|multi.language)",
+          "(translate|locale|language).*(setup|support|add)"
+        ]
+      }
+    },
+    "visual-regression": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "file": "skills/visual-regression/SKILL.md",
+      "promptTriggers": {
+        "keywords": ["visual regression", "screenshot test", "pixel diff", "baseline screenshot", "visual test", "screenshot comparison"],
+        "intentPatterns": [
+          "(setup|add|run).*(visual regression|screenshot test|pixel diff)",
+          "(compare|diff).*(screenshot|visual|baseline)"
+        ]
+      }
+    },
+    "flaky-test-detection": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "file": "skills/flaky-test-detection/SKILL.md",
+      "promptTriggers": {
+        "keywords": ["flaky test", "flaky", "intermittent test", "test stability", "quarantine test", "unreliable test"],
+        "intentPatterns": [
+          "(detect|find|fix|quarantine).*(flaky|intermittent|unreliable).*(test)",
+          "(test).*(flaky|stability|reliability)"
+        ]
+      }
+    },
+    "load-testing": {
+      "type": "skill",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "file": "skills/load-testing/SKILL.md",
+      "promptTriggers": {
+        "keywords": ["load test", "stress test", "k6", "artillery", "performance test", "benchmark", "throughput", "concurrent users"],
+        "intentPatterns": [
+          "(run|setup|add).*(load test|stress test|performance test|benchmark)",
+          "(k6|artillery).*(setup|run|config)"
+        ]
+      }
+    }
+  }
+}
