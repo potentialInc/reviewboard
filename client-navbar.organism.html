@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Navbar Component</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+    <!-- CLIENT NAVBAR START -->
+    <nav class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#6366F1] rounded-lg flex items-center justify-center text-white">
+                <i data-lucide="layers" class="w-5 h-5"></i>
+            </div>
+            <span class="font-jakarta font-bold text-lg text-[#0F172A] tracking-tight">ReviewBoard</span>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <span class="text-sm text-slate-500 font-medium hidden sm:block">Client Mode</span>
+            <a href="login.page.html" class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-red-600 transition-colors">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                Logout
+            </a>
+        </div>
+    </nav>
+    <!-- CLIENT NAVBAR END -->
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+```
+
+####
