@@ -1,0 +1,30 @@
+version: '3.8'
+
+# Development: Next.js dev server + Supabase local
+# Usage: docker compose -f docker-compose.dev.yml up
+
+services:
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: reviewboard-dev
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=http://host.docker.internal:54321
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SESSION_SECRET=reviewboard-dev-secret-change-in-production-32chars!
+      - ADMIN_ID=${ADMIN_ID:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - reviewboard-network
+
+networks:
+  reviewboard-network:
+    driver: bridge

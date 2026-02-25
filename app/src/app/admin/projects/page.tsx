@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Trash2, Copy, Check } from 'lucide-react';
+import { Plus, Search, Trash2, Copy, Check, Eye } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/components/ui/toast';
@@ -110,19 +110,22 @@ export default function AdminProjectsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Projects</h1>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold font-jakarta">Projects</h1>
+          <p className="text-muted mt-1">Manage client projects and access credentials.</p>
+        </div>
         <button
           onClick={() => { setShowCreateModal(true); setCreatedCreds(null); setNewProject({ name: '', slack_channel: '' }); }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
           <Plus className="w-4 h-4" /> New Project
         </button>
       </div>
 
       {/* Search + Actions */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
           <input
             type="text"
@@ -132,20 +135,19 @@ export default function AdminProjectsPage() {
             className="w-full pl-9 pr-4 py-2 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
-        {selected.size > 0 && (
-          <button
-            onClick={() => setShowBulkDeleteModal(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100"
-          >
-            <Trash2 className="w-4 h-4" /> Delete ({selected.size})
-          </button>
-        )}
+        <button
+          onClick={() => setShowBulkDeleteModal(true)}
+          disabled={selected.size === 0}
+          className="flex items-center gap-2 px-3 py-2 text-red-600 bg-red-50 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Trash2 className="w-4 h-4" /> Bulk Delete{selected.size > 0 && ` (${selected.size})`}
+        </button>
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         {loading ? (
-          <div className="p-6"><TableSkeleton rows={5} cols={6} /></div>
+          <div className="p-6"><TableSkeleton rows={5} cols={8} /></div>
         ) : filtered.length === 0 ? (
           <div className="px-6 py-12 text-center">
             <svg className="w-24 h-24 mx-auto mb-4 text-gray-200" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -164,7 +166,7 @@ export default function AdminProjectsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-gray-50/50">
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">
                   <input
                     type="checkbox"
                     checked={selected.size === filtered.length && filtered.length > 0}
@@ -175,19 +177,19 @@ export default function AdminProjectsPage() {
                     className="rounded"
                   />
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">Project</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">Client ID</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">Screens</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">Open</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">Slack</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">Created</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">Actions</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Project Name</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Slack Channel</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Client ID</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Created</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Screens</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Open Feedback</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3">
+                <tr key={p.id} className="group cursor-pointer hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
                     <input
                       type="checkbox"
                       checked={selected.has(p.id)}
@@ -199,32 +201,41 @@ export default function AdminProjectsPage() {
                       className="rounded"
                     />
                   </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/admin/projects/${p.id}`} className="text-sm font-medium text-foreground hover:text-primary">
+                  <td className="px-6 py-4">
+                    <Link href={`/admin/projects/${p.id}`} className="text-sm font-medium text-foreground group-hover:text-primary">
                       {p.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted">{p.client_id || '-'}</td>
-                  <td className="px-4 py-3 text-sm">{p.screen_count}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">
+                    {p.slack_channel ? (
+                      <span className="bg-slate-100 px-2 py-1 rounded text-xs">#{p.slack_channel}</span>
+                    ) : (
+                      <span className="text-sm text-muted">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-muted">{p.client_id || '-'}</td>
+                  <td className="px-6 py-4 text-sm text-muted">{new Date(p.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-sm">{p.screen_count}</td>
+                  <td className="px-6 py-4">
                     {p.open_feedback_count > 0 ? (
-                      <span className="text-sm font-medium text-status-open">{p.open_feedback_count}</span>
+                      <span className="bg-red-100 text-red-800 rounded-full px-2.5 py-0.5 text-xs font-medium">{p.open_feedback_count}</span>
                     ) : (
                       <span className="text-sm text-muted">0</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted">{p.slack_channel || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-muted">{new Date(p.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <Link href={`/admin/projects/${p.id}`} className="px-2 py-1 text-xs text-primary hover:bg-primary-light rounded-lg">
-                        Detail
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Link
+                        href={`/admin/projects/${p.id}`}
+                        className="p-2 text-muted hover:text-primary hover:bg-primary-light rounded-lg transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
                       </Link>
                       <button
                         onClick={() => setShowDeleteModal(p.id)}
-                        className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg"
+                        className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
-                        Delete
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>

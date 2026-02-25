@@ -15,11 +15,11 @@ async function getSessionFromCookie(request: NextRequest) {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public paths
-  if (pathname === '/login' || pathname.startsWith('/api/auth/')) {
+  if (pathname === '/login' || pathname.startsWith('/api/auth/') || pathname === '/api/health') {
     return NextResponse.next();
   }
 

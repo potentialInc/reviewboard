@@ -36,7 +36,7 @@ fi
 PRD_FULL="$PRD_PATH"
 [ ! -f "$PRD_FULL" ] && PRD_FULL="$PROJECT_ROOT/$PRD_PATH"
 
-AGENT_FILE="$PROJECT_ROOT/agents/${AGENT}.md"
+AGENT_FILE="$SCRIPT_DIR/agents/${AGENT}.md"
 if [ ! -f "$AGENT_FILE" ]; then
   echo "ERROR: Agent file not found: $AGENT_FILE" >&2
   exit 1
@@ -114,14 +114,14 @@ MISTAKES=""
 PATTERNS=""
 DECISIONS=""
 
-if [ -f "$PROJECT_ROOT/memory/MISTAKES.md" ]; then
-  MISTAKES=$(cat "$PROJECT_ROOT/memory/MISTAKES.md")
+if [ -f "$SCRIPT_DIR/memory/MISTAKES.md" ]; then
+  MISTAKES=$(cat "$SCRIPT_DIR/memory/MISTAKES.md")
 fi
-if [ -f "$PROJECT_ROOT/memory/PATTERNS.md" ]; then
-  PATTERNS=$(cat "$PROJECT_ROOT/memory/PATTERNS.md")
+if [ -f "$SCRIPT_DIR/memory/PATTERNS.md" ]; then
+  PATTERNS=$(cat "$SCRIPT_DIR/memory/PATTERNS.md")
 fi
-if [ -f "$PROJECT_ROOT/memory/DECISIONS.md" ]; then
-  DECISIONS=$(cat "$PROJECT_ROOT/memory/DECISIONS.md")
+if [ -f "$SCRIPT_DIR/memory/DECISIONS.md" ]; then
+  DECISIONS=$(cat "$SCRIPT_DIR/memory/DECISIONS.md")
 fi
 
 # ─── Load agent instructions ───────────────────────────────────────────────────

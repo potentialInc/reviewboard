@@ -45,7 +45,7 @@ PRD_GATE="$SCRIPT_DIR/prd-gate.sh"
 PRD_RESOLVER="$SCRIPT_DIR/prd-resolver.sh"
 STACK_DETECTOR="$SCRIPT_DIR/stack-detector.sh"
 AUTO_FIX="$SCRIPT_DIR/auto-fix-loop.sh"
-CONFIG_FILE="$PROJECT_ROOT/harness.config.json"
+CONFIG_FILE="$SCRIPT_DIR/harness.config.json"
 
 MAX_RETRIES=3
 if [ -f "$CONFIG_FILE" ] && command -v jq &>/dev/null; then
@@ -175,7 +175,7 @@ if [ "$stage2_status" = "COMPLETE" ]; then
   elif [ -x "$PRD_RESOLVER" ]; then
     ACTIVE_PRD=$("$PRD_RESOLVER" 2>/dev/null | head -1 || echo "")
   else
-    ACTIVE_PRD=$(find "$PROJECT_ROOT/prd" -name "prd-*.md" 2>/dev/null | head -1 || echo "")
+    ACTIVE_PRD=$(find "$SCRIPT_DIR/prd" -name "prd-*.md" 2>/dev/null | head -1 || echo "")
   fi
 else
   echo -e "${CYAN}${BOLD}[2/5] PRD${NC}"
@@ -234,7 +234,7 @@ if [ -z "${ACTIVE_PRD:-}" ]; then
   if [ -n "$PRD_OVERRIDE" ]; then
     ACTIVE_PRD="$PRD_OVERRIDE"
   else
-    ACTIVE_PRD=$(find "$PROJECT_ROOT/prd" -name "prd-*.md" 2>/dev/null | head -1 || echo "")
+    ACTIVE_PRD=$(find "$SCRIPT_DIR/prd" -name "prd-*.md" 2>/dev/null | head -1 || echo "")
   fi
 fi
 PRD_REL="${ACTIVE_PRD#$PROJECT_ROOT/}"
@@ -292,8 +292,8 @@ else
   # Architecture enforcement
   echo -e "${CYAN}  → Running architecture enforcement...${NC}"
   enforce_exit=0
-  if [ -x "$PROJECT_ROOT/architecture/enforce.sh" ]; then
-    "$PROJECT_ROOT/architecture/enforce.sh" 2>&1 || enforce_exit=$?
+  if [ -x "$SCRIPT_DIR/architecture/enforce.sh" ]; then
+    "$SCRIPT_DIR/architecture/enforce.sh" 2>&1 || enforce_exit=$?
     if [ "$enforce_exit" -ne 0 ]; then
       echo -e "${YELLOW}  ⚠ Architecture violations found — running auto-fix...${NC}"
       fix_exit=0
@@ -344,8 +344,8 @@ else
   # Guard tests
   echo -e "${CYAN}  → Running guard tests...${NC}"
   guard_exit=0
-  if [ -x "$PROJECT_ROOT/tests/run-tests.sh" ]; then
-    "$PROJECT_ROOT/tests/run-tests.sh" guards 2>&1 || guard_exit=$?
+  if [ -x "$SCRIPT_DIR/tests/run-tests.sh" ]; then
+    "$SCRIPT_DIR/tests/run-tests.sh" guards 2>&1 || guard_exit=$?
     if [ "$guard_exit" -ne 0 ] && [ "$guard_exit" -ne 2 ]; then
       echo -e "${RED}  ✗ SHIP FAILED — guard tests failed${NC}"
       set_stage_status 5 "FAILED" "guard tests failed"

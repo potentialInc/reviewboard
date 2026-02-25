@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Monitor, MessageSquare, AlertCircle, RefreshCw } from 'lucide-react';
-import { CountBadge } from '@/components/ui/badge';
 import { CardSkeleton } from '@/components/ui/skeleton';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 
@@ -52,8 +51,8 @@ export default function ClientScreenListPage() {
           <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse" />
           <div className="w-40 h-6 bg-gray-200 rounded-lg animate-pulse" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => <CardSkeleton key={i} />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => <CardSkeleton key={i} />)}
         </div>
       </div>
     );
@@ -77,20 +76,32 @@ export default function ClientScreenListPage() {
 
   if (!project) return <p>Project not found</p>;
 
+  const totalOpenFeedback = project.screens.reduce((sum, s) => sum + s.open_feedback_count, 0);
+
   return (
     <div>
       <Breadcrumb items={[
         { label: 'Projects', href: '/client/projects' },
         { label: project.name },
       ]} />
-      <div className="flex items-center gap-3 mb-6">
-        <Link
-          href="/client/projects"
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <h1 className="text-2xl font-bold">{project.name}</h1>
+
+      <Link
+        href="/client/projects"
+        className="inline-flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors text-muted mb-4"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span className="text-sm">Back to Projects</span>
+      </Link>
+
+      <h1 className="text-2xl font-bold font-jakarta">{project.name}</h1>
+
+      <div className="flex items-center gap-4 text-sm text-muted mb-8">
+        <span>{project.screens.length} {project.screens.length === 1 ? 'screen' : 'screens'}</span>
+        {totalOpenFeedback > 0 && (
+          <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md border border-red-400">
+            {totalOpenFeedback} open
+          </span>
+        )}
       </div>
 
       {project.screens.length === 0 ? (
@@ -100,19 +111,19 @@ export default function ClientScreenListPage() {
           <p className="text-muted">The admin hasn&apos;t uploaded any screens for this project.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {project.screens.map((s) => (
             <Link
               key={s.id}
               href={`/client/projects/${id}/screens/${s.id}`}
-              className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-lg hover:border-primary/30 transition-all group"
+              className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-lg transition-all group"
             >
-              <div className="aspect-video bg-gray-100 relative overflow-hidden">
+              <div className="aspect-[9/16] bg-gray-100 relative overflow-hidden">
                 {s.latest_version ? (
                   <img
                     src={s.latest_version.image_url}
                     alt={s.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-400">
@@ -121,12 +132,19 @@ export default function ClientScreenListPage() {
                 )}
                 {s.open_feedback_count > 0 && (
                   <div className="absolute top-3 right-3">
-                    <CountBadge count={s.open_feedback_count} variant="danger" />
+                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md border border-red-400">
+                      {s.open_feedback_count}
+                    </span>
                   </div>
                 )}
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="bg-white/90 text-foreground px-4 py-2 rounded-full text-sm font-medium translate-y-2 group-hover:translate-y-0 transition-all">
+                    View Design
+                  </span>
+                </div>
               </div>
-              <div className="p-4">
-                <h3 className="font-semibold group-hover:text-primary transition-colors">{s.name}</h3>
+              <div className="border-t border-slate-100 p-4">
+                <h3 className="font-medium group-hover:text-primary transition-colors">{s.name}</h3>
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted">
                   <MessageSquare className="w-4 h-4" />
                   <span>{s.open_feedback_count} open feedback</span>

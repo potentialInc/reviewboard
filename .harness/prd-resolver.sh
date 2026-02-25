@@ -16,7 +16,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PRD_DIR="$PROJECT_ROOT/prd"
+PRD_DIR="$SCRIPT_DIR/prd"
 MODE="${1:-}"
 
 # If explicit filename given (not a flag), use it directly

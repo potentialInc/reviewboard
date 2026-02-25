@@ -166,7 +166,7 @@ fi
 
 # ── Safe Mode: limit parallel agents ──
 # Fail-safe: if config is missing, assume safe mode (non-dev protection)
-CONFIG_FILE="$PROJECT_ROOT/harness.config.json"
+CONFIG_FILE="$SCRIPT_DIR/harness.config.json"
 if [ -f "$CONFIG_FILE" ]; then
   SAFE_MODE=$(jq -r '.safeMode // false' "$CONFIG_FILE" 2>/dev/null)
 else
@@ -321,7 +321,7 @@ fi
 # Phase 3b: Validate guard integrity
 # ─────────────────────────────────────────────
 if [ "$DRY_RUN" = false ]; then
-  TESTS_RUNNER="$PROJECT_ROOT/tests/run-tests.sh"
+  TESTS_RUNNER="$SCRIPT_DIR/tests/run-tests.sh"
   if [ -x "$TESTS_RUNNER" ]; then
     echo -e "\n${CYAN}Phase 3b: Running guard tests${NC}"
     GUARD_RESULT=0

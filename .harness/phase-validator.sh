@@ -227,7 +227,7 @@ case "$PHASE" in
     ;;
 
   prd)
-    if find "$PROJECT_ROOT/prd" -name "prd-*.md" 2>/dev/null | head -1 | grep -q .; then
+    if find "$SCRIPT_DIR/prd" -name "prd-*.md" 2>/dev/null | head -1 | grep -q .; then
       pass "PRD file found in prd/"
     else
       fail "No PRD file found in prd/"

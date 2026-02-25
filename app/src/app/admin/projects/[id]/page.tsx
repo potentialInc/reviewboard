@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  ArrowLeft, Save, Plus, Upload, Trash2, Copy, Check, Monitor, History,
+  ArrowLeft, Plus, Upload, Trash2, Copy, Check, Monitor, History,
+  Search, SlidersHorizontal, ArrowUpDown, RefreshCw,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
@@ -51,6 +52,7 @@ export default function AdminProjectDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchProject = useCallback(async () => {
     try {
@@ -134,6 +136,10 @@ export default function AdminProjectDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const filteredScreens = project?.screens.filter((s) =>
+    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+  ) ?? [];
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -155,7 +161,7 @@ export default function AdminProjectDetailPage() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <Breadcrumb items={[
         { label: 'Dashboard', href: '/admin' },
         { label: 'Projects', href: '/admin/projects' },
@@ -169,72 +175,59 @@ export default function AdminProjectDetailPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/admin/projects" className="p-2 rounded-lg hover:bg-gray-100">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <h1 className="text-2xl font-bold">Project Detail</h1>
-      </div>
-
-      {/* Project info */}
-      <div className="bg-card rounded-2xl border border-border p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <Link href="/admin/projects" className="p-2 rounded-lg hover:bg-gray-100">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
           <div>
-            <label className="block text-sm font-medium mb-1.5">Project Name</label>
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              className="w-full px-4 py-2 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Slack Channel</label>
-            <input
-              type="text"
-              value={editSlack}
-              onChange={(e) => setEditSlack(e.target.value)}
-              placeholder="Webhook URL"
-              className="w-full px-4 py-2 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
+            <h1 className="text-2xl font-bold font-jakarta">{project.name}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              {project.client_id && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs font-mono">
+                  {project.client_id}
+                </span>
+              )}
+              {project.slack_channel && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md text-xs">
+                  # Slack
+                </span>
+              )}
+            </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
-          <div className="flex-1">
-            <p className="text-xs text-muted">Client ID</p>
-            <p className="text-sm font-mono font-medium">{project.client_id || '-'}</p>
-          </div>
-          <div className="flex-1">
-            <p className="text-xs text-muted">Password</p>
-            <p className="text-sm font-mono font-medium">{project.client_password}</p>
-          </div>
-          <button onClick={copyUrl} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-sm hover:bg-gray-100">
-            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-            Copy URL
-          </button>
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
-
-      {/* Screens */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Screens ({project.screens.length})</h2>
         <button
           onClick={() => setShowAddScreen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover"
+          className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover shadow-lg shadow-primary/20"
         >
           <Plus className="w-4 h-4" /> Add Screen
         </button>
       </div>
+
+      {/* Search / Filter Toolbar */}
+      <div className="flex items-center gap-2 mb-6">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search screens..."
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+        </div>
+        <button className="p-2 rounded-xl border border-border hover:bg-gray-50 text-muted">
+          <SlidersHorizontal className="w-4 h-4" />
+        </button>
+        <button className="p-2 rounded-xl border border-border hover:bg-gray-50 text-muted">
+          <ArrowUpDown className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Section heading */}
+      <p className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4">
+        PROJECT SCREENS
+      </p>
 
       {project.screens.length === 0 ? (
         <div className="bg-card rounded-2xl border border-border p-12 text-center">
@@ -249,19 +242,19 @@ export default function AdminProjectDetailPage() {
           <p className="text-sm text-muted">Add a screen to start collecting feedback.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {project.screens.map((s) => (
-            <div key={s.id} className="bg-card rounded-2xl border border-border overflow-hidden">
-              <div className="aspect-video bg-gray-100 relative">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filteredScreens.map((s) => (
+            <div key={s.id} className="group bg-card rounded-2xl border border-border overflow-hidden">
+              <div className="aspect-[9/16] bg-gray-100 relative">
                 {s.latest_version ? (
-                  <Image src={s.latest_version.image_url} alt={s.name} width={640} height={360} sizes="(max-width: 768px) 100vw, 33vw" className="w-full h-full object-cover" />
+                  <Image src={s.latest_version.image_url} alt={s.name} width={360} height={640} sizes="(max-width: 768px) 100vw, 25vw" className="w-full h-full object-cover" />
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-400">
                     <Monitor className="w-10 h-10" />
                   </div>
                 )}
                 {s.latest_version && (
-                  <span className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
+                  <span className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full">
                     v{s.latest_version.version}
                   </span>
                 )}
@@ -270,34 +263,52 @@ export default function AdminProjectDetailPage() {
                     <CountBadge count={s.open_feedback_count} variant="danger" />
                   </div>
                 )}
-              </div>
-              <div className="p-4">
-                <h3 className="text-sm font-semibold mb-3">{s.name}</h3>
-                <div className="flex items-center gap-2">
+                {/* Hover overlay with action buttons */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                   <button
                     onClick={() => setShowUpload(s.id)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-primary bg-primary-light rounded-lg hover:bg-indigo-100"
+                    className="flex flex-col items-center gap-1 text-white hover:text-primary-light transition-colors"
+                    title="Update Version"
                   >
-                    <Upload className="w-3 h-3" /> Upload
+                    <RefreshCw className="w-5 h-5" />
+                    <span className="text-[10px]">Update Version</span>
                   </button>
                   {s.screenshot_versions.length > 1 && (
                     <button
                       onClick={() => setShowHistory(s)}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-muted bg-gray-100 rounded-lg hover:bg-gray-200"
+                      className="flex flex-col items-center gap-1 text-white hover:text-primary-light transition-colors"
+                      title="History"
                     >
-                      <History className="w-3 h-3" /> History
+                      <History className="w-5 h-5" />
+                      <span className="text-[10px]">History</span>
                     </button>
                   )}
                   <button
                     onClick={() => setShowDeleteScreen(s.id)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 bg-red-50 rounded-lg hover:bg-red-100 ml-auto"
+                    className="flex flex-col items-center gap-1 text-white hover:text-red-400 transition-colors"
+                    title="Delete"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-5 h-5" />
+                    <span className="text-[10px]">Delete</span>
                   </button>
                 </div>
               </div>
+              <div className="p-4">
+                <h3 className="text-sm font-medium">{s.name}</h3>
+              </div>
             </div>
           ))}
+
+          {/* Add Screen placeholder card */}
+          <button
+            onClick={() => setShowAddScreen(true)}
+            className="border-2 border-dashed border-border rounded-2xl aspect-[9/16] flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer"
+          >
+            <div className="flex flex-col items-center gap-2 text-muted">
+              <Plus className="w-8 h-8" />
+              <span className="text-sm font-medium">Add Screen</span>
+            </div>
+          </button>
         </div>
       )}
 

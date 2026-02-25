@@ -8,7 +8,8 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '5xl';
+  bare?: boolean;
 }
 
 const sizeMap = {
@@ -16,9 +17,10 @@ const sizeMap = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
+  '5xl': 'max-w-5xl',
 };
 
-export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
+export function Modal({ open, onClose, title, children, size = 'md', bare = false }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,14 +85,20 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
-      <div ref={modalRef} className={`relative bg-white rounded-2xl shadow-xl w-full ${sizeMap[size]} mx-4 max-h-[90vh] flex flex-col`}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Close">
-            <X className="w-5 h-5 text-muted" />
-          </button>
-        </div>
-        <div className="px-6 py-4 overflow-y-auto">{children}</div>
+      <div ref={modalRef} className={`relative bg-white rounded-2xl shadow-xl w-full ${sizeMap[size]} mx-4 max-h-[90vh] flex flex-col overflow-hidden`}>
+        {bare ? (
+          children
+        ) : (
+          <>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-semibold">{title}</h2>
+              <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Close">
+                <X className="w-5 h-5 text-muted" />
+              </button>
+            </div>
+            <div className="px-6 py-4 overflow-y-auto">{children}</div>
+          </>
+        )}
       </div>
     </div>
   );

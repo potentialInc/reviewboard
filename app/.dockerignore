@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.env.*
+!.env.local.example
+.git
+Dockerfile
+docker-compose*.yml
+*.md
+.DS_Store
+supabase/.branches
+supabase/.temp

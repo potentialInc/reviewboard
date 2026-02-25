@@ -102,22 +102,27 @@
 
 ## P3 — DevOps & Infrastructure
 
-### ISSUE-015: Supabase Migration Files
-- **File**: `app/supabase/migrations/` (missing)
+### [x] ISSUE-015: Supabase Migration Files
+- **File**: `app/supabase/migrations/`
 - **Problem**: Schema managed as single SQL file. No migration history for incremental changes.
-- **Fix**: Move to Supabase migration system (`supabase db diff` → versioned migration files).
-- **Note**: Deferred — requires Supabase CLI and active project. Not a code issue.
+- **Fix**: Split `schema.sql` into 6 versioned migration files under `app/supabase/migrations/`:
+  - `20250225000000_create_extensions.sql` — uuid-ossp
+  - `20250225000001_create_tables.sql` — All 7 tables with constraints
+  - `20250225000002_create_indexes.sql` — 11 performance indexes
+  - `20250225000003_enable_rls.sql` — RLS + service_role policies
+  - `20250225000004_setup_storage.sql` — Screenshots bucket + policies
+  - `20250225000005_create_functions.sql` — update_updated_at trigger
+- Also created `app/supabase/seed.sql` for dev data and configured `config.toml` with project_id and storage bucket.
 
 ### [x] ISSUE-016: Environment Validation
 - **File**: `app/src/lib/env.ts` (new)
 - **Problem**: No startup validation of required env vars. App crashes with cryptic errors if SUPABASE_URL is missing.
 - **Fix**: Created `app/src/lib/env.ts` with `validateEnv()`. Checks SUPABASE_URL, ANON_KEY, SERVICE_ROLE_KEY. Throws in production, logs warning in development. Called from root layout.
 
-### ISSUE-017: Next.js Middleware Deprecation Warning
-- **File**: `app/src/middleware.ts`
+### [x] ISSUE-017: Next.js Middleware Deprecation Warning
+- **File**: `app/src/proxy.ts` (was `middleware.ts`)
 - **Problem**: Next.js 16 warns "middleware file convention is deprecated, use proxy instead".
-- **Fix**: Suppress for now. The `proxy` convention is not yet stable. Will migrate when Next.js proxy API is finalized.
-- **Note**: Deferred — waiting for stable Next.js proxy API.
+- **Fix**: Renamed `middleware.ts` → `proxy.ts` and export function `middleware()` → `proxy()`. Config matcher unchanged. Deprecation warning eliminated.
 
 ---
 

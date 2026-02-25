@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FolderKanban, MessageSquare, Clock, TrendingUp } from 'lucide-react';
+import { FolderKanban, MessageSquare, Clock, TrendingUp, Plus } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/badge';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,10 +28,38 @@ interface DashboardData {
 }
 
 const statCards = [
-  { key: 'total_projects', label: 'Total Projects', icon: FolderKanban, color: 'text-primary bg-primary-light' },
-  { key: 'total_open_feedback', label: 'Open Feedback', icon: MessageSquare, color: 'text-status-open bg-status-open-bg' },
-  { key: 'feedback_today', label: 'Today', icon: Clock, color: 'text-status-progress bg-status-progress-bg' },
-  { key: 'feedback_this_week', label: 'This Week', icon: TrendingUp, color: 'text-status-resolved bg-status-resolved-bg' },
+  {
+    key: 'total_projects',
+    label: 'Total Projects',
+    icon: FolderKanban,
+    iconColor: 'text-primary bg-primary-light',
+    numberColor: '',
+    trend: 'All time',
+  },
+  {
+    key: 'total_open_feedback',
+    label: 'Open Feedback',
+    icon: MessageSquare,
+    iconColor: 'text-red-500 bg-red-50',
+    numberColor: 'text-red-500',
+    trend: 'Needs attention',
+  },
+  {
+    key: 'feedback_today',
+    label: 'Today',
+    icon: Clock,
+    iconColor: 'text-purple-600 bg-purple-50',
+    numberColor: '',
+    trend: 'Last 24 hours',
+  },
+  {
+    key: 'feedback_this_week',
+    label: 'This Week',
+    icon: TrendingUp,
+    iconColor: 'text-green-500 bg-green-50',
+    numberColor: 'text-green-500',
+    trend: 'Last 7 days',
+  },
 ] as const;
 
 export default function AdminDashboard() {
@@ -57,7 +85,20 @@ export default function AdminDashboard() {
   return (
     <div>
       <Breadcrumb items={[{ label: 'Dashboard' }]} />
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold font-jakarta">Dashboard</h1>
+          <p className="text-muted mt-1">Overview of all active projects and feedback status.</p>
+        </div>
+        <Link
+          href="/admin/projects/new"
+          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-hover"
+        >
+          <Plus className="w-4 h-4" />
+          New Project
+        </Link>
+      </div>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm">
@@ -66,33 +107,39 @@ export default function AdminDashboard() {
       )}
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {statCards.map(({ key, label, icon: Icon, color }) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        {statCards.map(({ key, label, icon: Icon, iconColor, numberColor, trend }) => (
           <div key={key} className="bg-card rounded-2xl border border-border p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
+              <span className="text-sm text-muted">{label}</span>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconColor}`}>
                 <Icon className="w-5 h-5" />
               </div>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16 mb-1" />
             ) : (
-              <p className="text-3xl font-bold">{data?.stats[key] ?? 0}</p>
+              <p className={`text-3xl font-bold font-jakarta ${numberColor}`}>
+                {data?.stats[key] ?? 0}
+              </p>
             )}
-            <p className="text-sm text-muted mt-1">{label}</p>
+            <p className="text-xs text-muted mt-1">{trend}</p>
           </div>
         ))}
       </div>
 
       {/* Recent activity */}
       <div className="bg-card rounded-2xl border border-border">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold">Recent Activity</h2>
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+          <h2 className="text-lg font-bold font-jakarta">Recent Activity</h2>
+          <Link href="/admin/feedback" className="text-sm text-primary hover:underline">
+            View All
+          </Link>
         </div>
         <div className="divide-y divide-border">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="px-6 py-4 flex gap-4">
+              <div key={i} className="p-4 flex gap-4">
                 <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
                 <div className="flex-1">
                   <Skeleton className="h-4 w-3/4 mb-2" />
@@ -109,7 +156,7 @@ export default function AdminDashboard() {
               <Link
                 key={item.id}
                 href="/admin/feedback"
-                className="flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
+                className="flex items-start gap-4 p-4 hover:bg-slate-50 transition-colors"
               >
                 <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center text-xs font-bold">
                   #{item.pin_number}

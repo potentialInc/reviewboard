@@ -41,7 +41,10 @@ export default function ClientProjectsPage() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">My Projects</h1>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold font-jakarta">Assigned Projects</h1>
+          <p className="text-muted mt-1">Select a project to view designs and leave feedback.</p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => <CardSkeleton key={i} />)}
         </div>
@@ -78,14 +81,18 @@ export default function ClientProjectsPage() {
   return (
     <div>
       <Breadcrumb items={[{ label: 'Projects' }]} />
-      <h1 className="text-2xl font-bold mb-6">My Projects</h1>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold font-jakarta">Assigned Projects</h1>
+        <p className="text-muted mt-1">Select a project to view designs and leave feedback.</p>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects.map((p) => (
           <Link
             key={p.id}
             href={`/client/projects/${p.id}/screens`}
-            className="bg-card rounded-2xl border border-border p-6 hover:shadow-lg hover:border-primary/30 transition-all group"
+            className="relative overflow-hidden bg-card rounded-2xl border border-border p-6 hover:shadow-xl hover:border-primary/30 transition-all duration-300 group"
           >
+            <div className="absolute top-0 left-0 w-1 h-full bg-primary rounded-l-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center">
                 <FolderKanban className="w-6 h-6 text-primary" />
@@ -94,11 +101,8 @@ export default function ClientProjectsPage() {
                 <CountBadge count={p.open_feedback_count} variant="danger" />
               )}
             </div>
-            <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">{p.name}</h3>
-            <p className="text-sm text-muted mt-1">
-              Updated {new Date(p.updated_at).toLocaleDateString()}
-            </p>
-            <div className="flex items-center gap-4 mt-4 text-sm text-muted">
+            <h3 className="text-lg font-bold font-jakarta group-hover:text-primary transition-colors">{p.name}</h3>
+            <div className="flex items-center gap-4 mt-4 border-t border-slate-100 pt-4 text-sm text-muted">
               <span className="flex items-center gap-1">
                 <Monitor className="w-4 h-4" /> {p.screen_count} screens
               </span>
@@ -106,6 +110,9 @@ export default function ClientProjectsPage() {
                 <MessageSquare className="w-4 h-4" /> {p.open_feedback_count} open
               </span>
             </div>
+            <p className="text-xs text-gray-400 mt-4">
+              Updated {new Date(p.updated_at).toLocaleDateString()}
+            </p>
           </Link>
         ))}
       </div>

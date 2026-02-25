@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, AlertCircle, RefreshCw, MousePointer } from 'lucide-react';
 import { PinOverlay } from '@/components/feedback/pin-overlay';
 import { CommentForm } from '@/components/feedback/comment-form';
 import { CommentPanel } from '@/components/feedback/comment-panel';
@@ -156,7 +156,7 @@ export default function FeedbackViewerPage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold">{screen.name}</h1>
+            <h1 className="text-base font-bold">{screen.name}</h1>
             <p className="text-sm text-muted">{screen.project.name}</p>
           </div>
         </div>
@@ -228,11 +228,20 @@ export default function FeedbackViewerPage() {
         </div>
 
         {/* Comment side panel */}
-        <div className="w-80 border-l border-border flex flex-col">
-          <div className="px-4 py-3 border-b border-border">
-            <h3 className="text-sm font-semibold">
-              Feedback ({currentVersion?.comments?.length || 0})
-            </h3>
+        <div className="w-96 border-l border-border flex flex-col">
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold flex items-center">
+                Feedback
+                <span className="bg-slate-100 text-slate-600 text-xs font-medium rounded-full px-2 py-0.5 ml-2">
+                  {currentVersion?.comments?.length || 0} Items
+                </span>
+              </h3>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-light text-primary text-xs font-medium rounded-full">
+                <MousePointer className="w-3 h-3" />
+                Click anywhere to comment
+              </span>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto">
             <CommentPanel

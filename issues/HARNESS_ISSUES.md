@@ -43,3 +43,38 @@
   - PRD에 외부 서비스 목록 정의 → `.env.local.example` 자동 생성
   - 로컬 개발 시 필요한 시크릿을 기존 프로젝트에서 자동 탐색/복사
   - `harness.config.json`에 `shared_secrets` 경로 설정 지원
+
+## HARNESS-006: 생성 파일 위치 규칙 미적용
+- **증상**: `SCREEN_STATUS.md`가 프로젝트 루트에 생성됨. `docs/` 또는 적절한 하위 폴더에 위치해야 함.
+- **원인**: 파일 생성 시 디렉토리 규칙이 없음. 에이전트가 편의상 루트에 생성.
+- **해결**: 수동으로 `docs/SCREEN_STATUS.md`로 이동
+- **하네스 개선안**:
+  - `architecture/rules.json`에 파일 배치 규칙 추가 (status → `docs/`, reports → `docs/`, issues → `issues/`)
+  - post-write 훅에서 루트 디렉토리에 `.md` 파일 생성 시 경고 + 적절한 폴더 제안
+  - 템플릿 파일(`templates/status/`)에 output 경로 메타데이터 포함
+
+## HARNESS-008: 배포 파이프라인 및 라이브 링크 부재
+- **증상**: 코드가 GitHub 레포(`PotentialJayden/jayden-reviewboard`)에 푸시되었으나 라이브 URL이 없음. 빌드 성공해도 접근 가능한 환경이 존재하지 않음.
+- **원인**: 배포 설정(Dockerfile, docker-compose, Dokploy 설정, CI/CD 워크플로우)이 프로젝트에 전혀 없음. `claude-base`의 deployment.md 스킬(Phase 9: ship)이 실행되지 않았음.
+- **현재 상태** (해결 중):
+  - ✅ `app/Dockerfile` — Node 20 Alpine, 3-stage multi-stage build (deps → build → runner), standalone output
+  - ✅ `docker-compose.yml` — production용 (환경변수 주입)
+  - ✅ `docker-compose.dev.yml` — development용 (Supabase 로컬 연동)
+  - ✅ `.github/workflows/deploy.yml` — Build + Deploy (dev/staging/production 3환경)
+  - ✅ `app/src/app/api/health/route.ts` — DB 연결 체크 포함 헬스체크 엔드포인트
+  - ✅ `app/.env.local.example` — 환경변수 템플릿 (기존)
+  - ⏳ Dokploy/AWS ECS 실제 연결 — 인프라 설정 후 워크플로우 주석 해제 필요
+- **하네스 개선안**:
+  - `fullstack` 파이프라인의 Phase 9(ship)가 빌드 성공 후 자동 트리거되도록 연결
+  - `deployment.md` 스킬이 프로젝트 타입(Next.js/NestJS/Django) 감지 후 적절한 Dockerfile 자동 생성
+  - 배포 전 체크리스트 자동 검증: Dockerfile 존재, 환경변수 설정, 헬스체크 엔드포인트 확인
+
+## HARNESS-007: 변경 규모와 관계없이 한번에 실행 원칙
+- **증상**: Design QA 결과 11개 화면의 이슈를 발견했지만, 분석만 수행하고 수정을 별도 단계로 분리함. 사용자가 "왜 한번에 안 하냐"고 지적.
+- **원인**: 에이전트가 "분석 → 보고 → 승인 대기 → 수정" 순차 워크플로우를 따름. 대규모 변경에 대한 자동 실행 정책 부재.
+- **하네스 개선안**:
+  - **원칙**: 아무리 변경이 커도 QA/분석과 수정을 분리하지 않고, 발견된 이슈를 즉시 수정 진행
+  - `agents/design-qa.md`에 `auto_fix: true` 플래그 추가 — QA 완료 후 자동으로 수정 에이전트 트리거
+  - 병렬 에이전트 파이프라인: QA 결과 JSON → 자동 분류 → 병렬 수정 에이전트 실행 → 빌드 검증
+  - `harness.config.json`에 `max_parallel_fix_agents` 설정 (기본값: 화면 수)
+  - 사용자 확인이 필요한 경우는 파괴적 변경(삭제, 구조 변경)에만 한정

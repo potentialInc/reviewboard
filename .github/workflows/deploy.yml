@@ -1,0 +1,145 @@
+# ReviewBoard CI/CD Pipeline
+# Dev: auto-deploy on push to main
+# Production: manual trigger with approval
+
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: reviewboard-app
+
+jobs:
+  # ── Step 1: Build & Test ──
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Type check & Build
+        working-directory: app
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
+            -t ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.IMAGE_NAME }}:latest \
+            ./app
+
+      - name: Smoke test container
+        run: |
+          docker run -d --name smoke-test \
+            -p 3000:3000 \
+            -e NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
+            -e NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
+            -e SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
+            -e SESSION_SECRET=${{ secrets.SESSION_SECRET }} \
+            -e ADMIN_ID=${{ secrets.ADMIN_ID }} \
+            -e ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          sleep 5
+          curl -f http://localhost:3000/api/health || (docker logs smoke-test && exit 1)
+          docker stop smoke-test
+
+  # ── Step 2: Deploy to Dev (auto on push) ──
+  deploy-dev:
+    needs: build
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: ${{ vars.DEV_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Dokploy deployment (uncomment when Dokploy is configured)
+      # - name: Deploy to Dokploy
+      #   run: |
+      #     dokploy deploy app --env dev
+      #     curl -f ${{ vars.DEV_URL }}/api/health
+
+      - name: Deployment placeholder
+        run: echo "Dev deployment target not yet configured. Set up Dokploy or AWS and update this workflow."
+
+  # ── Step 3: Deploy to Staging (manual) ──
+  deploy-staging:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deployment placeholder
+        run: echo "Staging deployment target not yet configured."
+
+  # ── Step 4: Deploy to Production (manual + approval) ──
+  deploy-production:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # AWS ECS deployment (uncomment when AWS is configured)
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-east-1
+      #
+      # - name: Login to ECR
+      #   uses: aws-actions/amazon-ecr-login@v2
+      #
+      # - name: Push to ECR & Deploy ECS
+      #   run: |
+      #     docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ secrets.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      #     docker push ${{ secrets.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      #     aws ecs update-service --cluster reviewboard-cluster --service reviewboard-app --force-new-deployment
+
+      - name: Deployment placeholder
+        run: echo "Production deployment target not yet configured. Set up AWS ECS and update this workflow."

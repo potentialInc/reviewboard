@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut } from 'lucide-react';
+import { LogOut, Layers } from 'lucide-react';
 
 export function ClientNavbar() {
   const handleLogout = async () => {
@@ -10,17 +10,24 @@ export function ClientNavbar() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-border flex items-center justify-between px-6 z-40">
-      <Link href="/client/projects" className="text-xl font-bold text-primary">
-        ReviewBoard
+    <nav className="sticky top-0 h-16 bg-white border-b border-border flex items-center justify-between px-6 z-40" aria-label="Client navigation">
+      <Link href="/client/projects" className="flex items-center gap-2">
+        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
+          <Layers className="w-5 h-5" aria-hidden="true" />
+        </div>
+        <span className="font-jakarta text-lg font-bold text-foreground tracking-tight">ReviewBoard</span>
       </Link>
-      <button
-        onClick={handleLogout}
-        className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
-      >
-        <LogOut className="w-4 h-4" />
-        Logout
-      </button>
-    </header>
+      <div className="flex items-center gap-4">
+        <span className="text-sm text-muted font-medium hidden sm:block">Client Mode</span>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-sm font-medium text-muted hover:text-red-600 transition-colors"
+          aria-label="Logout"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
+      </div>
+    </nav>
   );
 }

@@ -483,7 +483,7 @@ cmd_preview() {
 
   # requireConfirmation check (deploy or deploy:preview)
   # Fail-safe: default to requiring confirmation. Only skip if config explicitly says so.
-  local CONFIG_FILE="$PROJECT_ROOT/harness.config.json"
+  local CONFIG_FILE="$SCRIPT_DIR/harness.config.json"
   local NEEDS_CONFIRM=true
   if [ -f "$CONFIG_FILE" ]; then
     if command -v jq &>/dev/null; then
@@ -583,7 +583,7 @@ cmd_promote() {
 
   # requireConfirmation check (internal safety net — agent should already have user confirmation)
   # Fail-safe: default to requiring confirmation. Only skip if config explicitly says so.
-  local CONFIG_FILE="$PROJECT_ROOT/harness.config.json"
+  local CONFIG_FILE="$SCRIPT_DIR/harness.config.json"
   local NEEDS_CONFIRM=true
   if [ -f "$CONFIG_FILE" ]; then
     if command -v jq &>/dev/null; then

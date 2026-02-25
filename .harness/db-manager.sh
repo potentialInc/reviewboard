@@ -221,7 +221,7 @@ cmd_migrate() {
 
   # requireConfirmation check (db:migrate)
   # Fail-safe: default to requiring confirmation. Only skip if config explicitly says so.
-  local CONFIG_FILE="$PROJECT_ROOT/harness.config.json"
+  local CONFIG_FILE="$SCRIPT_DIR/harness.config.json"
   local NEEDS_CONFIRM=true
   if [ -f "$CONFIG_FILE" ]; then
     if command -v jq &>/dev/null; then
@@ -314,7 +314,7 @@ cmd_seed() {
 
   # requireConfirmation check (db:seed)
   # Fail-safe: default to requiring confirmation. Only skip if config explicitly says so.
-  local CONFIG_FILE="$PROJECT_ROOT/harness.config.json"
+  local CONFIG_FILE="$SCRIPT_DIR/harness.config.json"
   local NEEDS_CONFIRM=true
   if [ -f "$CONFIG_FILE" ]; then
     if command -v jq &>/dev/null; then
@@ -431,7 +431,7 @@ cmd_reset() {
 
   # requireConfirmation check (config-driven gate)
   # Fail-safe: default to requiring confirmation. Only skip if config explicitly says so.
-  local CONFIG_FILE="$PROJECT_ROOT/harness.config.json"
+  local CONFIG_FILE="$SCRIPT_DIR/harness.config.json"
   local NEEDS_CONFIRM=true
   local CONFIRM_FLAG=false
   if [ -f "$CONFIG_FILE" ]; then

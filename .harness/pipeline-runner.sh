@@ -78,8 +78,8 @@ elif [ "$START_PHASE" -gt 2 ]; then
 fi
 
 STATUS_FILE="$PROJECT_ROOT/PIPELINE_STATUS.md"
-AGENT_MANIFEST="$PROJECT_ROOT/agents/agent-manifest.json"
-CONFIG_FILE="$PROJECT_ROOT/harness.config.json"
+AGENT_MANIFEST="$SCRIPT_DIR/agents/agent-manifest.json"
+CONFIG_FILE="$SCRIPT_DIR/harness.config.json"
 AUTO_FIX="$SCRIPT_DIR/auto-fix-loop.sh"
 PROMPT_BUILDER="$SCRIPT_DIR/prompt-builder.sh"
 PHASE_VALIDATOR="$SCRIPT_DIR/phase-validator.sh"
@@ -130,7 +130,7 @@ init_status_file() {
   [ -f "$PROJECT_ROOT/pyproject.toml" ] && stack="python"
   [ -f "$PROJECT_ROOT/go.mod" ] && stack="go"
 
-  cp "$PROJECT_ROOT/templates/status/PIPELINE_STATUS.template.md" "$STATUS_FILE" 2>/dev/null || cat > "$STATUS_FILE" <<EOF
+  cp "$SCRIPT_DIR/templates/status/PIPELINE_STATUS.template.md" "$STATUS_FILE" 2>/dev/null || cat > "$STATUS_FILE" <<EOF
 # Pipeline Status: ${project_name}
 
 > Created: $(date '+%Y-%m-%d %H:%M')
@@ -307,7 +307,7 @@ run_phase() {
       return 1
     fi
     local gate_exit=0
-    "$PRD_GATE" "$PROJECT_ROOT/$resolved_prd" --mode all || gate_exit=$?
+    "$PRD_GATE" "$SCRIPT_DIR/$resolved_prd" --mode all || gate_exit=$?
     if [ "$gate_exit" -eq 1 ]; then
       echo -e "${RED}  ✗ PRD Gate BLOCKED. Fix PRD issues before pipeline can proceed.${NC}"
       set_phase_status "$phase_num" "FAILED"
@@ -468,9 +468,9 @@ fi
 echo -e "${GREEN}Pipeline COMPLETE — all phases done.${NC}"
 
 # Run final guard tests
-if [ -x "$PROJECT_ROOT/tests/run-tests.sh" ]; then
+if [ -x "$SCRIPT_DIR/tests/run-tests.sh" ]; then
   echo -e "${CYAN}→ Running final guard tests...${NC}"
-  "$PROJECT_ROOT/tests/run-tests.sh" guards 2>&1 || {
+  "$SCRIPT_DIR/tests/run-tests.sh" guards 2>&1 || {
     echo -e "${YELLOW}⚠ Guard tests reported issues. Review before deploying.${NC}"
   }
 fi

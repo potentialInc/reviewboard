@@ -74,9 +74,9 @@ trap cleanup_autofix EXIT INT TERM
 COMMAND="${1:-}"
 MAX_RETRIES="${2:-3}"
 VERBOSE=false
-CONFIG_FILE="$PROJECT_ROOT/harness.config.json"
+CONFIG_FILE="$SCRIPT_DIR/harness.config.json"
 METRICS_DIR="$PROJECT_ROOT/.harness-metrics"
-TESTS_RUNNER="$PROJECT_ROOT/tests/run-tests.sh"
+TESTS_RUNNER="$SCRIPT_DIR/tests/run-tests.sh"
 SMOKE_FAIL_COUNT=0
 
 # Helper: escape string for safe JSON embedding
