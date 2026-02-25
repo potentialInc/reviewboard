@@ -22,16 +22,16 @@ export async function GET() {
     checks.db_error = err instanceof Error ? err.message : 'unknown';
   }
 
-  const healthy = checks.database === 'ok';
+  const dbHealthy = checks.database === 'ok';
+  checks.status = dbHealthy ? 'ok' : 'degraded';
 
-  return NextResponse.json(
-    {
-      ...checks,
-      uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
-      timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '0.1.0',
-      environment: process.env.NODE_ENV || 'unknown',
-    },
-    { status: healthy ? 200 : 503 },
-  );
+  // Always return 200 for Docker/LB health checks (app is running).
+  // DB connectivity is reported in the response body.
+  return NextResponse.json({
+    ...checks,
+    uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '0.1.0',
+    environment: process.env.NODE_ENV || 'unknown',
+  });
 }
