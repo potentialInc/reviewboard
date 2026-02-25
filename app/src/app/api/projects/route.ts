@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
 import { createServiceSupabase } from '@/lib/supabase/server';
 import { getSession, isAdmin } from '@/lib/auth';
 import { getOpenFeedbackCountByProject } from '@/lib/feedback-count';
@@ -129,20 +128,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });
   }
 
-  // Auto-provision client account with random password
+  // Auto-provision client account with shared password "Potential" (per PRD)
   const randomNum = Math.floor(1000 + Math.random() * 9000);
   const loginId = `${name.replace(/\s+/g, '')}${randomNum}`;
-  const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(12)))
-    .map(b => b.toString(36).padStart(2, '0'))
-    .join('')
-    .slice(0, 16);
+  const defaultPassword = 'Potential';
 
-  const hashedPassword = await bcrypt.hash(randomPassword, 12);
   const { data: account } = await supabase
     .from('client_accounts')
     .insert({
       login_id: loginId,
-      password: hashedPassword,
+      password: defaultPassword,
     })
     .select()
     .single();
@@ -160,7 +155,7 @@ export async function POST(request: NextRequest) {
     project,
     client_account: {
       login_id: loginId,
-      initial_password: randomPassword,
+      initial_password: defaultPassword,
     },
   }, { status: 201 });
 }

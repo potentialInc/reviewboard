@@ -57,15 +57,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid credentials. Please try again.' }, { status: 401 });
   }
 
-  // Auto-upgrade: hash plaintext password on successful login
-  if (!isHashed) {
-    const hashed = await bcrypt.hash(password, 12);
-    await supabase
-      .from('client_accounts')
-      .update({ password: hashed })
-      .eq('id', account.id);
-  }
-
   await setSession({
     type: 'client',
     id: account.id,
