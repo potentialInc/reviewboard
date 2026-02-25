@@ -56,9 +56,9 @@ simulate_autofix_guard 255 "stop"
 
 # Test 7: Verify auto-fix-loop has both guard check points
 # (after success AND after Claude fix)
-POST_SUCCESS_GUARD=$(grep -c 'guard.*after success' "$SCRIPT_DIR/harness/auto-fix-loop.sh" 2>/dev/null || true)
+POST_SUCCESS_GUARD=$(grep -c 'guard.*after success' "$SCRIPT_DIR/auto-fix-loop.sh" 2>/dev/null || true)
 POST_SUCCESS_GUARD=${POST_SUCCESS_GUARD:-0}
-POST_FIX_GUARD=$(grep -c 'guard.*after fix' "$SCRIPT_DIR/harness/auto-fix-loop.sh" 2>/dev/null || true)
+POST_FIX_GUARD=$(grep -c 'guard.*after fix' "$SCRIPT_DIR/auto-fix-loop.sh" 2>/dev/null || true)
 POST_FIX_GUARD=${POST_FIX_GUARD:-0}
 
 if [ "$POST_SUCCESS_GUARD" -gt 0 ] && [ "$POST_FIX_GUARD" -gt 0 ]; then
@@ -69,7 +69,7 @@ else
 fi
 
 # Test 8: Verify auto-fix-loop has exit 1 for guard P0 failures
-P0_EXITS=$(grep -c 'exit 1' "$SCRIPT_DIR/harness/auto-fix-loop.sh" 2>/dev/null || echo "0")
+P0_EXITS=$(grep -c 'exit 1' "$SCRIPT_DIR/auto-fix-loop.sh" 2>/dev/null || echo "0")
 if [ "$P0_EXITS" -ge 2 ]; then
   echo "  [PASS] auto-fix-loop.sh has multiple exit points for failures"
 else

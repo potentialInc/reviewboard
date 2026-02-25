@@ -78,6 +78,43 @@
   - `agents/` 공통 규칙에 "ask-last" 원칙 추가: 환경 탐색 → 가능 경로 판단 → 1개면 바로 실행, 2개 이상이면 추천과 함께 진행
   - 파괴적이지 않은 작업(빌드, 테스트, 탐색)은 절대 질문하지 않고 실행
 
+## HARNESS-010: 하네스 기능 활용률 30% — 대부분 수동 진행
+- **증상**: 하네스에 27개 스크립트, 13개 에이전트, 9개 스킬, 24개 테스트, CLI가 있었으나 약 70%를 사용하지 않고 수동으로 작업함.
+- **미사용 항목**:
+  - ❌ 테스트 24개 (smoke 15 + guard 9): `run-tests.sh` 한 번도 실행 안 함
+  - ❌ CLI: TypeScript 소스 존재, 빌드/실행 안 함 (`harness audit`, `harness skill-detect` 등)
+  - ❌ 에이전트 9개: security, performance, reviewer, refactorer, test-writer, documentation, feature-builder, bug-fixer (명시적 호출 없음)
+  - ❌ 스킬 8개: e2e-gen, load-testing, visual-regression, playwright-cli, api-docs, flaky-test-detection, html-to-react, prd-normalize
+  - ❌ 병렬 오케스트레이션: worktree 기반 병렬 에이전트 미사용, 전부 순차 처리
+  - ❌ MCP 연동 3개: Playwright, PostgreSQL, GitHub MCP 설정만 되고 사용 안 함
+  - ⚠️ 훅 11개: 설정됐으나 실행 여부 불명
+- **원인**:
+  - 에이전트가 "작업 진행"에 집중하면서 "하네스 도구 활용" 단계를 건너뜀
+  - 하네스 기능 목록을 작업 시작 전에 체크하는 프로세스 없음
+  - 수동 진행이 "더 빠르다"고 판단해 자동화 도구를 무시
+- **하네스 개선안**:
+  - **세션 시작 시 강제 체크리스트**: 사용 가능한 에이전트/스킬/테스트를 먼저 나열하고, 관련 도구를 활용 계획에 포함
+  - `session-start.sh` 훅에서 "이번 작업에 적용 가능한 하네스 기능" 자동 추천
+  - 빌드 성공 후 자동으로 `run-tests.sh smoke` 실행하는 post-build 훅 추가
+  - CLI를 세션 시작 시 자동 빌드하는 bootstrap 단계 추가
+  - 에이전트 매니페스트에서 현재 작업 키워드와 매칭되는 에이전트 자동 활성화
+
+## HARNESS-011: `.harness/` 디렉토리 이동 후 테스트 경로 미조정
+- **증상**: 하네스 파일을 루트 → `.harness/`로 이동한 후 테스트 24개 중 8개 실패. 경로 수정 후에도 guard 4개 실패 잔존.
+- **수정 완료**:
+  - ✅ Smoke 테스트 15/15 통과 — `$SCRIPT_DIR/harness/` → `$SCRIPT_DIR/` 일괄 치환
+  - ✅ `protected-paths.txt`에 `.harness/` 추가
+- **미수정 (guard 4개)**:
+  - `test-protected-paths` [P0]: `harness/auto-fix-loop.sh` 경로가 `.harness/`로 이동했으나, 훅이 실제 파일 존재 여부로 판단하여 "위험 없음"으로 통과
+  - `test-path-traversal` [P0]: symlink 테스트가 `.harness/` 경로 패턴 미매칭
+  - `test-rules-json-fallback` [P0]: 동일한 보호 경로 매칭 문제
+  - `test-prd-resolver` [P1]: `prd-resolver.sh`에서 `$SCRIPT_DIR` 미정의 변수 사용 (기존 버그)
+- **근본 원인**: 하네스가 `harness/` 하드코딩 경로에 의존. 디렉토리 이동 시 자동 마이그레이션 없음.
+- **하네스 개선안**:
+  - 보호 경로를 하드코딩 대신 `harness.config.json`에서 동적으로 로드
+  - 테스트 스크립트에서 `$HARNESS_ROOT` 환경변수 사용 (경로 독립적)
+  - `prd-resolver.sh`의 `$SCRIPT_DIR` → `$PROJECT_ROOT` 변수 수정
+
 ## HARNESS-007: 변경 규모와 관계없이 한번에 실행 원칙
 - **증상**: Design QA 결과 11개 화면의 이슈를 발견했지만, 분석만 수행하고 수정을 별도 단계로 분리함. 사용자가 "왜 한번에 안 하냐"고 지적.
 - **원인**: 에이전트가 "분석 → 보고 → 승인 대기 → 수정" 순차 워크플로우를 따름. 대규모 변경에 대한 자동 실행 정책 부재.

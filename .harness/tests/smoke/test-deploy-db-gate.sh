@@ -4,8 +4,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-DEPLOY="$SCRIPT_DIR/harness/deploy-manager.sh"
-DB_MGR="$SCRIPT_DIR/harness/db-manager.sh"
+DEPLOY="$SCRIPT_DIR/deploy-manager.sh"
+DB_MGR="$SCRIPT_DIR/db-manager.sh"
 
 echo "[smoke] Testing deploy/db confirmation gates..."
 

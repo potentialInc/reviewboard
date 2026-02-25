@@ -32,7 +32,7 @@ trap restore_rules EXIT
 echo "  Testing: corrupt rules.json → harness/ should still be blocked..."
 echo '{ "version": "broken"' > "$RULES_FILE"  # invalid JSON with missing protected_paths
 
-"$HOOK" "$SCRIPT_DIR/harness/auto-fix-loop.sh" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
+"$HOOK" "$SCRIPT_DIR/auto-fix-loop.sh" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
 if [ "$EXIT_CODE" -eq 2 ]; then
   echo "  [PASS] harness/ blocked with corrupt rules.json (exit 2)"
 else
@@ -44,7 +44,7 @@ fi
 echo "  Testing: empty protected_paths → harness/ should still be blocked..."
 echo '{"protected_paths":{"paths":[]},"exceptions":{"allowed_core_edits":[]}}' > "$RULES_FILE"
 
-"$HOOK" "$SCRIPT_DIR/harness/auto-fix-loop.sh" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
+"$HOOK" "$SCRIPT_DIR/auto-fix-loop.sh" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
 if [ "$EXIT_CODE" -eq 2 ]; then
   echo "  [PASS] harness/ blocked with empty protected_paths (exit 2)"
 else

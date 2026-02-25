@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-VALIDATOR="$SCRIPT_DIR/harness/config-validator.sh"
+VALIDATOR="$SCRIPT_DIR/config-validator.sh"
 
 echo "[smoke] Testing config validator..."
 

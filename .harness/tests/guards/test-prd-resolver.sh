@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RESOLVER="$SCRIPT_DIR/harness/prd-resolver.sh"
+RESOLVER="$SCRIPT_DIR/prd-resolver.sh"
 PRD_DIR="$SCRIPT_DIR/prd"
 
 echo "[guard] Testing PRD resolver..."

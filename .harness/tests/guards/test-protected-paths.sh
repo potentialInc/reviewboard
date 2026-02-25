@@ -37,7 +37,7 @@ fi
 
 # Test 3: Editing harness/ should be BLOCKED (exit 2)
 echo "  Testing: harness/auto-fix-loop.sh should be blocked..."
-"$HOOK" "$SCRIPT_DIR/harness/auto-fix-loop.sh" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
+"$HOOK" "$SCRIPT_DIR/auto-fix-loop.sh" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
 if [ "$EXIT_CODE" -eq 2 ]; then
   echo "  [PASS] harness/auto-fix-loop.sh blocked (exit 2)"
 else

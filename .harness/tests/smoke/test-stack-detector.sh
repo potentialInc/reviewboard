@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-DETECTOR="$SCRIPT_DIR/harness/stack-detector.sh"
+DETECTOR="$SCRIPT_DIR/stack-detector.sh"
 
 echo "[smoke] Testing stack-detector.sh JSON output..."
 

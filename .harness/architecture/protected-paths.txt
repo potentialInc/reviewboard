@@ -5,6 +5,7 @@
 #   - architecture/enforce.sh (CI enforcement)
 #
 # One path per line. Trailing / means directory prefix match.
+.harness/
 harness/
 hooks/
 architecture/

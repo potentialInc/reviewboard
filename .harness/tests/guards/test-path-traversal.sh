@@ -48,7 +48,7 @@ fi
 # Test 4: Symlink to protected file should be BLOCKED (if symlinks can be created)
 SYMLINK_TEST_DIR=$(mktemp -d)
 SYMLINK_PATH="$SYMLINK_TEST_DIR/harmless-link.sh"
-if ln -s "$SCRIPT_DIR/harness/auto-fix-loop.sh" "$SYMLINK_PATH" 2>/dev/null; then
+if ln -s "$SCRIPT_DIR/auto-fix-loop.sh" "$SYMLINK_PATH" 2>/dev/null; then
   echo "  Testing: symlink to harness/ should be blocked..."
   "$HOOK" "$SYMLINK_PATH" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
   if [ "$EXIT_CODE" -eq 2 ]; then

@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-AUTOFIX="$SCRIPT_DIR/harness/auto-fix-loop.sh"
+AUTOFIX="$SCRIPT_DIR/auto-fix-loop.sh"
 
 echo "[smoke] Testing filter_secrets() functional behavior..."
 

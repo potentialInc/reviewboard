@@ -60,7 +60,7 @@ simulate_orchestrator_guard 127 "false" 1
 simulate_orchestrator_guard 255 "false" 1
 
 # Test 7: Verify the actual orchestrator has the guard check section
-if ! grep -q "GUARD_P0_FAIL" "$SCRIPT_DIR/harness/orchestrator.sh"; then
+if ! grep -q "GUARD_P0_FAIL" "$SCRIPT_DIR/orchestrator.sh"; then
   echo "  [FAIL] orchestrator.sh missing GUARD_P0_FAIL variable"
   FAILED=$((FAILED + 1))
 else
@@ -68,7 +68,7 @@ else
 fi
 
 # Test 8: Verify orchestrator exits 1 when GUARD_P0_FAIL > 0
-if ! grep -q 'GUARD_P0_FAIL.*-gt 0' "$SCRIPT_DIR/harness/orchestrator.sh"; then
+if ! grep -q 'GUARD_P0_FAIL.*-gt 0' "$SCRIPT_DIR/orchestrator.sh"; then
   echo "  [FAIL] orchestrator.sh doesn't exit on guard P0 failure"
   FAILED=$((FAILED + 1))
 else

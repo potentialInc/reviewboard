@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-MANAGER="$SCRIPT_DIR/harness/worktree-manager.sh"
+MANAGER="$SCRIPT_DIR/worktree-manager.sh"
 
 echo "[smoke] Testing worktree-manager.sh..."
 

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SCRIPT="$SCRIPT_DIR/harness/auto-fix-loop.sh"
+SCRIPT="$SCRIPT_DIR/auto-fix-loop.sh"
 
 echo "[smoke] Testing auto-fix-loop.sh..."
 
