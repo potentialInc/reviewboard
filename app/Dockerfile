@@ -46,7 +46,7 @@ USER nextjs
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "echo '[startup] PORT='$PORT' NODE_ENV='$NODE_ENV' SUPABASE_URL='${NEXT_PUBLIC_SUPABASE_URL:+SET}' SESSION_SECRET='${SESSION_SECRET:+SET}' ADMIN_ID='${ADMIN_ID:+SET}; ls -la server.js 2>&1; exec node server.js"]

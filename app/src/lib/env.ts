@@ -38,9 +38,8 @@ export function validateEnv() {
       '',
     ].join('\n');
 
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error(msg);
-    }
+    // Log but don't crash — individual features handle missing vars gracefully.
+    // Throwing here kills the server before it can listen on port 3000.
     console.error(msg);
   }
 }
