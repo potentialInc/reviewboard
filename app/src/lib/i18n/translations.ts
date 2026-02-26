@@ -179,6 +179,11 @@ export const translations = {
     'viewer.loadFailed': 'Failed to load screen',
     'viewer.notFound': 'Screen not found',
     'viewer.latest': 'Latest',
+    'viewer.pinMode': 'Pin Mode',
+    'viewer.panMode': 'Pan Mode',
+    'viewer.pinModeHint': 'Pin Mode — Click to add feedback (C to exit)',
+    'viewer.panModeKey': 'Pan mode (C)',
+    'viewer.pinModeKey': 'Pin mode (C)',
 
     // Comment Form
     'commentForm.addFeedback': 'Add Feedback',
@@ -393,6 +398,11 @@ export const translations = {
     'viewer.loadFailed': '화면을 불러오지 못했습니다',
     'viewer.notFound': '화면을 찾을 수 없습니다',
     'viewer.latest': '최신',
+    'viewer.pinMode': '핀 모드',
+    'viewer.panMode': '탐색 모드',
+    'viewer.pinModeHint': '핀 모드 — 클릭하여 피드백 추가 (C로 해제)',
+    'viewer.panModeKey': '탐색 모드 (C)',
+    'viewer.pinModeKey': '핀 모드 (C)',
 
     // Comment Form
     'commentForm.addFeedback': '피드백 추가',

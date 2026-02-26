@@ -1,10 +1,11 @@
 'use client';
 
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useRef, useState, useEffect } from 'react';
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import Image from 'next/image';
-import { ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Crosshair, Hand } from 'lucide-react';
 import type { Comment, FeedbackStatus } from '@/lib/types';
+import { useTranslation } from '@/lib/i18n/context';
 
 const statusColors: Record<FeedbackStatus, string> = {
   'open': 'bg-status-open text-white',
@@ -21,26 +22,33 @@ interface PinOverlayProps {
 }
 
 export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPinClick, onImageClick, imageUrl }: PinOverlayProps) {
+  const { t } = useTranslation();
   const transformRef = useRef<ReactZoomPanPinchRef>(null);
-  const imageContainerRef = useRef<HTMLDivElement>(null);
-  const [isPanning, setIsPanning] = useState(false);
   const [scale, setScale] = useState(1);
+  const [pinMode, setPinMode] = useState(false);
+
+  // Toggle pin mode with C key
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'c' || e.key === 'C') {
+        // Don't toggle if user is typing in an input/textarea
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        setPinMode(prev => !prev);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    // Don't place pin if user was panning
-    if (isPanning) return;
+    if (!pinMode) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     onImageClick(x, y);
-  }, [onImageClick, isPanning]);
-
-  const handlePanStart = useCallback(() => setIsPanning(true), []);
-  const handlePanStop = useCallback(() => {
-    // Delay reset so click handler can check isPanning
-    setTimeout(() => setIsPanning(false), 50);
-  }, []);
+  }, [onImageClick, pinMode]);
 
   return (
     <div className="relative">
@@ -51,15 +59,12 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
         maxScale={4}
         centerOnInit
         wheel={{ step: 0.1 }}
-        panning={{ velocityDisabled: true }}
-        onPanningStart={handlePanStart}
-        onPanningStop={handlePanStop}
+        panning={{ disabled: pinMode, velocityDisabled: true }}
         onTransformed={(_, state) => setScale(state.scale)}
       >
         <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-auto !h-auto">
           <div
-            ref={imageContainerRef}
-            className="relative inline-block cursor-crosshair"
+            className={`relative inline-block ${pinMode ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
             onClick={handleClick}
           >
             <Image
@@ -96,8 +101,25 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
         </TransformComponent>
       </TransformWrapper>
 
-      {/* Zoom controls */}
+      {/* Toolbar */}
       <div className="absolute bottom-4 left-4 flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-border p-1 z-20">
+        {/* Mode toggle */}
+        <button
+          onClick={() => setPinMode(prev => !prev)}
+          className={`p-2 rounded-lg transition-colors ${
+            pinMode
+              ? 'bg-primary text-white'
+              : 'hover:bg-gray-100 text-slate-600'
+          }`}
+          aria-label={pinMode ? 'Switch to pan mode' : 'Switch to pin mode'}
+          title={pinMode ? t('viewer.panModeKey') : t('viewer.pinModeKey')}
+        >
+          {pinMode ? <Crosshair className="w-4 h-4" /> : <Hand className="w-4 h-4" />}
+        </button>
+
+        <div className="w-px h-5 bg-gray-200 mx-0.5" />
+
+        {/* Zoom controls */}
         <button
           onClick={() => transformRef.current?.zoomIn(0.3)}
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -131,6 +153,14 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
           <Maximize2 className="w-4 h-4 text-slate-600" />
         </button>
       </div>
+
+      {/* Mode indicator */}
+      {pinMode && (
+        <div className="absolute top-4 left-4 bg-primary text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg z-20 animate-fade-in flex items-center gap-1.5">
+          <Crosshair className="w-3 h-3" />
+          {t('viewer.pinModeHint')}
+        </div>
+      )}
     </div>
   );
 });
