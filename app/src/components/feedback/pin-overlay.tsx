@@ -30,7 +30,7 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
   // Toggle pin mode with C key
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'c' || e.key === 'C') {
+      if (e.code === 'KeyC' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
         // Don't toggle if user is typing in an input/textarea
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -155,10 +155,15 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
       </div>
 
       {/* Mode indicator */}
-      {pinMode && (
+      {pinMode ? (
         <div className="absolute top-4 left-4 bg-primary text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg z-20 animate-fade-in flex items-center gap-1.5">
           <Crosshair className="w-3 h-3" />
           {t('viewer.pinModeHint')}
+        </div>
+      ) : (
+        <div className="absolute top-4 left-4 bg-slate-700 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg z-20 animate-fade-in flex items-center gap-1.5">
+          <Hand className="w-3 h-3" />
+          {t('viewer.panModeHint')}
         </div>
       )}
     </div>

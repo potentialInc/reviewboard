@@ -181,9 +181,10 @@ export const translations = {
     'viewer.latest': 'Latest',
     'viewer.pinMode': 'Pin Mode',
     'viewer.panMode': 'Pan Mode',
-    'viewer.pinModeHint': 'Pin Mode — Click to add feedback (C to exit)',
-    'viewer.panModeKey': 'Pan mode (C)',
-    'viewer.pinModeKey': 'Pin mode (C)',
+    'viewer.pinModeHint': 'Pin Mode — Click to add feedback (Shift+C to exit)',
+    'viewer.panModeHint': 'Pan Mode — Drag to move (Shift+C for pin mode)',
+    'viewer.panModeKey': 'Pan mode (Shift+C)',
+    'viewer.pinModeKey': 'Pin mode (Shift+C)',
 
     // Comment Form
     'commentForm.addFeedback': 'Add Feedback',
@@ -400,9 +401,10 @@ export const translations = {
     'viewer.latest': '최신',
     'viewer.pinMode': '핀 모드',
     'viewer.panMode': '탐색 모드',
-    'viewer.pinModeHint': '핀 모드 — 클릭하여 피드백 추가 (C로 해제)',
-    'viewer.panModeKey': '탐색 모드 (C)',
-    'viewer.pinModeKey': '핀 모드 (C)',
+    'viewer.pinModeHint': '핀 모드 — 클릭하여 피드백 추가 (Shift+C로 해제)',
+    'viewer.panModeHint': '탐색 모드 — 드래그하여 이동 (Shift+C로 핀 모드)',
+    'viewer.panModeKey': '탐색 모드 (Shift+C)',
+    'viewer.pinModeKey': '핀 모드 (Shift+C)',
 
     // Comment Form
     'commentForm.addFeedback': '피드백 추가',
