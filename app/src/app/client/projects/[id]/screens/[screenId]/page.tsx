@@ -214,7 +214,7 @@ export default function FeedbackViewerPage() {
       {/* Main content */}
       <div className="flex flex-col lg:flex-row flex-1 gap-0 min-h-0 rounded-2xl border border-border overflow-hidden bg-white">
         {/* Screenshot viewer */}
-        <div className="flex-1 overflow-auto bg-gray-50 relative">
+        <div className="flex-1 overflow-auto bg-gray-50 relative flex items-start justify-center p-4">
           {currentVersion ? (
             <div className="relative">
               <PinOverlay

@@ -27,14 +27,14 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
   }, [onImageClick]);
 
   return (
-    <div className="relative inline-block w-full cursor-crosshair" onClick={handleClick}>
+    <div className="relative inline-block cursor-crosshair" onClick={handleClick}>
       <Image
         src={imageUrl}
         alt="Screenshot"
         width={1920}
         height={1080}
         sizes="(max-width: 768px) 100vw, 75vw"
-        className="w-full h-auto block"
+        className="max-w-full max-h-[calc(100vh-12rem)] w-auto h-auto block"
         draggable={false}
         priority
         unoptimized
