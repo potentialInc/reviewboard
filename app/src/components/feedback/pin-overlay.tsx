@@ -1,7 +1,9 @@
 'use client';
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
+import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import Image from 'next/image';
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 import type { Comment, FeedbackStatus } from '@/lib/types';
 
 const statusColors: Record<FeedbackStatus, string> = {
@@ -19,45 +21,116 @@ interface PinOverlayProps {
 }
 
 export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPinClick, onImageClick, imageUrl }: PinOverlayProps) {
+  const transformRef = useRef<ReactZoomPanPinchRef>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const [scale, setScale] = useState(1);
+
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Don't place pin if user was panning
+    if (isPanning) return;
+
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     onImageClick(x, y);
-  }, [onImageClick]);
+  }, [onImageClick, isPanning]);
+
+  const handlePanStart = useCallback(() => setIsPanning(true), []);
+  const handlePanStop = useCallback(() => {
+    // Delay reset so click handler can check isPanning
+    setTimeout(() => setIsPanning(false), 50);
+  }, []);
 
   return (
-    <div className="relative inline-block cursor-crosshair" onClick={handleClick}>
-      <Image
-        src={imageUrl}
-        alt="Screenshot"
-        width={1920}
-        height={1080}
-        sizes="(max-width: 768px) 100vw, 75vw"
-        className="w-auto h-auto block"
-        draggable={false}
-        priority
-        unoptimized
-      />
-      {comments.map((c) => (
+    <div className="relative">
+      <TransformWrapper
+        ref={transformRef}
+        initialScale={1}
+        minScale={0.25}
+        maxScale={4}
+        centerOnInit
+        wheel={{ step: 0.1 }}
+        panning={{ velocityDisabled: true }}
+        onPanningStart={handlePanStart}
+        onPanningStop={handlePanStop}
+        onTransformed={(_, state) => setScale(state.scale)}
+      >
+        <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-auto !h-auto">
+          <div
+            ref={imageContainerRef}
+            className="relative inline-block cursor-crosshair"
+            onClick={handleClick}
+          >
+            <Image
+              src={imageUrl}
+              alt="Screenshot"
+              width={1920}
+              height={1080}
+              sizes="(max-width: 768px) 100vw, 75vw"
+              className="w-auto h-auto block"
+              draggable={false}
+              priority
+              unoptimized
+            />
+            {comments.map((c) => (
+              <button
+                key={c.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPinClick(c);
+                }}
+                className={`absolute w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-lg hover:scale-110 ${
+                  selectedPin === c.id
+                    ? 'ring-2 ring-white ring-offset-2 scale-110'
+                    : ''
+                } ${statusColors[c.status]} animate-pin-drop`}
+                style={{ left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%, -50%)' }}
+                title={`#${c.pin_number}: ${c.text.slice(0, 50)}`}
+                aria-label={`Pin ${c.pin_number}: ${c.text.slice(0, 30)}`}
+              >
+                {c.pin_number}
+              </button>
+            ))}
+          </div>
+        </TransformComponent>
+      </TransformWrapper>
+
+      {/* Zoom controls */}
+      <div className="absolute bottom-4 left-4 flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-border p-1 z-20">
         <button
-          key={c.id}
-          onClick={(e) => {
-            e.stopPropagation();
-            onPinClick(c);
-          }}
-          className={`absolute w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-lg hover:scale-110 ${
-            selectedPin === c.id
-              ? 'ring-2 ring-white ring-offset-2 scale-110'
-              : ''
-          } ${statusColors[c.status]} animate-pin-drop`}
-          style={{ left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%, -50%)' }}
-          title={`#${c.pin_number}: ${c.text.slice(0, 50)}`}
-          aria-label={`Pin ${c.pin_number}: ${c.text.slice(0, 30)}`}
+          onClick={() => transformRef.current?.zoomIn(0.3)}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Zoom in"
         >
-          {c.pin_number}
+          <ZoomIn className="w-4 h-4 text-slate-600" />
         </button>
-      ))}
+        <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
+          {Math.round(scale * 100)}%
+        </span>
+        <button
+          onClick={() => transformRef.current?.zoomOut(0.3)}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Zoom out"
+        >
+          <ZoomOut className="w-4 h-4 text-slate-600" />
+        </button>
+        <div className="w-px h-5 bg-gray-200 mx-0.5" />
+        <button
+          onClick={() => transformRef.current?.resetTransform()}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Reset zoom"
+        >
+          <RotateCcw className="w-4 h-4 text-slate-600" />
+        </button>
+        <button
+          onClick={() => transformRef.current?.centerView(1)}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Fit to screen"
+        >
+          <Maximize2 className="w-4 h-4 text-slate-600" />
+        </button>
+      </div>
     </div>
   );
 });
