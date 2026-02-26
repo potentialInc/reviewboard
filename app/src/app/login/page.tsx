@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogIn, Layers, User, Lock } from 'lucide-react';
+import { LogIn, Layers, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
 import { LanguageToggle } from '@/components/ui/language-toggle';
 
@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Redirect already-authenticated users (lightweight check)
   useEffect(() => {
@@ -92,15 +93,23 @@ export default function LoginPage() {
                 <Lock className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('login.passwordPlaceholder')}
                   autoComplete="current-password"
                   aria-describedby="password-hint"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-white text-foreground placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-colors"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-border bg-white text-foreground placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-colors"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
               <p id="password-hint" className="text-xs text-muted mt-1.5">{t('login.passwordHint')}</p>
             </div>
