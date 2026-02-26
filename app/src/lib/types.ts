@@ -123,6 +123,8 @@ export interface FeedbackListItem {
   author_id: string;
   status: FeedbackStatus;
   created_at: string;
+  screen_id: string;
+  project_id: string;
   project_name: string;
   screen_name: string;
   reply_count: number;

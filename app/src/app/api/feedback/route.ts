@@ -64,11 +64,13 @@ export async function GET(request: NextRequest) {
 
   const enriched = (comments || []).map((c) => {
     const sv = c.screenshot_version as {
-      screen?: { name: string; project?: { name: string } };
+      screen?: { id: string; name: string; project?: { id: string; name: string } };
     };
     return {
       ...c,
+      screen_id: sv?.screen?.id || '',
       screen_name: sv?.screen?.name || '',
+      project_id: sv?.screen?.project?.id || '',
       project_name: sv?.screen?.project?.name || '',
       reply_count: (c.replies as { id: string }[])?.length || 0,
     };

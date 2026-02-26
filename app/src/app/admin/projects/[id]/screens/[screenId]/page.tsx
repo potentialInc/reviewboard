@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react';
 import { PinOverlay } from '@/components/feedback/pin-overlay';
-import { CommentPanel } from '@/components/feedback/comment-panel';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/components/ui/toast';
 import { useTranslation } from '@/lib/i18n/context';
@@ -29,13 +28,15 @@ interface ScreenData {
 export default function AdminScreenViewerPage() {
   const { t } = useTranslation();
   const { id: projectId, screenId } = useParams<{ id: string; screenId: string }>();
+  const searchParams = useSearchParams();
+  const pinFromUrl = searchParams.get('pin');
   const { toast } = useToast();
 
   const [screen, setScreen] = useState<ScreenData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
-  const [selectedPin, setSelectedPin] = useState<string | null>(null);
+  const [selectedPin, setSelectedPin] = useState<string | null>(pinFromUrl);
   const [showVersionPicker, setShowVersionPicker] = useState(false);
   const versionPickerRef = useRef<HTMLDivElement>(null);
 
@@ -46,11 +47,21 @@ export default function AdminScreenViewerPage() {
       if (!res.ok) throw new Error('Failed to load screen');
       const data = await res.json();
       setScreen(data);
+
+      // If a pin is specified via URL, find the version that contains it
+      if (pinFromUrl) {
+        const versionWithPin = (data.screenshot_versions as ScreenshotVersion[])
+          .find((v) => v.comments?.some((c: Comment) => c.id === pinFromUrl));
+        if (versionWithPin) {
+          setSelectedVersion(versionWithPin.id);
+          return;
+        }
+      }
       setSelectedVersion(prev => prev ?? data.latest_version?.id ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     }
-  }, [screenId]);
+  }, [screenId, pinFromUrl]);
 
   useEffect(() => {
     fetchScreen().finally(() => setLoading(false));

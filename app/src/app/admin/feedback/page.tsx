@@ -1,18 +1,19 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/components/ui/toast';
 import { useTranslation } from '@/lib/i18n/context';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import { FeedbackDetailModal } from '@/components/feedback/detail-modal';
 import { FeedbackTable } from '@/components/admin/feedback/feedback-table';
 import type { FeedbackStatus, FeedbackListItem } from '@/lib/types';
 
 const PER_PAGE_OPTIONS = [10, 25, 50];
 
 export default function AdminFeedbackPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const { t } = useTranslation();
   const [feedback, setFeedback] = useState<FeedbackListItem[]>([]);
@@ -25,10 +26,6 @@ export default function AdminFeedbackPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackListItem | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [replyText, setReplyText] = useState('');
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFeedback = useCallback(async () => {
@@ -84,13 +81,10 @@ export default function AdminFeedbackPage() {
     }
   };
 
-  const handleViewDetail = async (item: FeedbackListItem) => {
-    setDetailLoading(true);
-    setSelectedFeedback(item);
-    const res = await fetch(`/api/feedback/${item.id}`);
-    const data = await res.json();
-    setSelectedFeedback({ ...item, ...data });
-    setDetailLoading(false);
+  const handleViewDetail = (item: FeedbackListItem) => {
+    if (item.project_id && item.screen_id) {
+      router.push(`/admin/projects/${item.project_id}/screens/${item.screen_id}?pin=${item.id}`);
+    }
   };
 
   const handleStatusChange = async (id: string, status: FeedbackStatus) => {
@@ -102,28 +96,7 @@ export default function AdminFeedbackPage() {
     if (res.ok) {
       toast(t('toast.statusUpdated'), 'success');
       fetchFeedback();
-      if (selectedFeedback?.id === id) {
-        setSelectedFeedback((prev) => prev ? { ...prev, status } : null);
-      }
     }
-  };
-
-  const handleReply = async () => {
-    if (!replyText.trim() || !selectedFeedback) return;
-    setSending(true);
-    const res = await fetch(`/api/comments/${selectedFeedback.id}/replies`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: replyText.trim() }),
-    });
-    if (res.ok) {
-      toast(t('toast.replySent'), 'success');
-      setReplyText('');
-      await handleViewDetail(selectedFeedback);
-    } else {
-      toast(t('toast.replyFailed'), 'error');
-    }
-    setSending(false);
   };
 
   const totalPages = Math.ceil(total / perPage);
@@ -247,16 +220,6 @@ export default function AdminFeedbackPage() {
         )}
       </div>
 
-      <FeedbackDetailModal
-        feedback={selectedFeedback}
-        loading={detailLoading}
-        replyText={replyText}
-        sending={sending}
-        onClose={() => { setSelectedFeedback(null); setReplyText(''); }}
-        onReply={handleReply}
-        onReplyTextChange={setReplyText}
-        onStatusChange={handleStatusChange}
-      />
     </div>
   );
 }
