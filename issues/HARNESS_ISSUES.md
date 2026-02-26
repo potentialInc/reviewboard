@@ -702,6 +702,20 @@
   4. **security-agent가 버킷 변경 시 인증 흐름 크로스체크**: iron-session 프로젝트에서 버킷 private 전환 → "브라우저 직접 접근 불가" 자동 경고
   5. **post-migration 훅**: migration 적용 후 자동으로 주요 기능(이미지 표시, 파일 다운로드) 스모크 테스트
 
+### HARNESS-048: createServiceSupabase 매 요청마다 새 인스턴스 생성 — DB Latency 752ms
+- **Status**: Resolved
+- **Priority**: P1
+- **Description**: Health endpoint에서 DB latency가 752ms로 측정됨. 실제 쿼리 시간은 ~100-200ms이지만, `createServiceSupabase()`가 매 호출마다 새 Supabase 클라이언트를 생성하여 DNS 조회(~50ms) + TCP 연결(~60ms) + TLS 핸드셰이크(~150ms) + SDK 초기화(~50ms)가 매번 반복.
+- **근본 원인**: `createServerSupabase()`는 매 요청마다 쿠키를 읽어야 해서 per-request 생성이 필수. `createServiceSupabase()`는 쿠키/세션이 없는 stateless 클라이언트인데, 같은 파일에 있다 보니 동일한 per-request 패턴을 **cargo-cult**로 복사. `async function` + `return createClient()`로 매번 새 인스턴스 반환.
+- **영향 범위**: 전체 API 라우트 9개 파일, 14개 호출 지점 + api-helpers.ts 2개 = 총 16곳에서 매 요청마다 불필요한 클라이언트 재생성
+- **해결**: `createServiceSupabase()`를 모듈 레벨 싱글턴으로 변경. 첫 호출에서만 인스턴스 생성, 이후 캐시된 인스턴스 반환.
+- **기대 효과**: 첫 요청 이후 DB latency ~100-200ms로 감소 (TLS 핸드셰이크 + TCP 재연결 비용 제거)
+- **하네스 개선안**:
+  1. Supabase 프로젝트에서 service role 클라이언트가 per-request 생성되면 경고하는 린트 규칙 추가
+  2. `performance-agent`가 HTTP 클라이언트/DB 클라이언트 인스턴스화 패턴을 자동 분석하는 규칙 추가
+  3. `templates/auth/supabase-auth.md`에 "service role client는 반드시 싱글턴" 패턴 명시
+  4. `config.toml`의 `[db.pooler] enabled = false`를 로컬 개발용임을 명시하는 주석 추가 (Cloud Supabase는 자체 pooler 사용)
+
 ### HARNESS-046: CSRF rejected — 리버스 프록시 뒤에서 Origin 불일치
 - **Status**: Resolved
 - **Priority**: P0

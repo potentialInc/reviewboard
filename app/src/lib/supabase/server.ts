@@ -27,8 +27,9 @@ export async function createServerSupabase() {
   );
 }
 
-// Service role client: bypasses RLS, no cookies needed
-export async function createServiceSupabase() {
+// Service role client: bypasses RLS, no cookies needed.
+// Singleton — stateless client reused across requests (no per-request cookies).
+function getServiceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -39,4 +40,13 @@ export async function createServiceSupabase() {
       },
     }
   );
+}
+
+let serviceClient: ReturnType<typeof getServiceClient> | null = null;
+
+export async function createServiceSupabase() {
+  if (!serviceClient) {
+    serviceClient = getServiceClient();
+  }
+  return serviceClient;
 }
