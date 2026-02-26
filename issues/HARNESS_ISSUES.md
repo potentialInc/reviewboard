@@ -686,6 +686,22 @@
   4. **prd-gate.sh에 디자인 교차 참조 검사 추가**: 디자인 자료 존재 시 Cross Reference 테이블 없으면 WARNING
   5. **reconciler 에이전트 신설**: `agents/reconciler.md` — PRD Section 6,8,9 + 디자인 자료를 동시에 읽고 불일치 보고
 
+### HARNESS-047: Supabase Storage 버킷 private 전환으로 이미지 깨짐 — 인프라 통합 테스트 부재
+- **Status**: Open
+- **Priority**: P0
+- **Description**: Migration 000008 PART 4가 `screenshots` 버킷을 `public = false`로 변경. 앱은 iron-session 인증을 사용하며 Supabase JWT가 없어서, 브라우저가 `getPublicUrl()`로 생성된 이미지 URL에 직접 접근 시 인증 실패. 프로덕션에서 모든 스크린샷 이미지가 깨져 보임.
+- **왜 test-writer가 못 잡았나**:
+  - `screenshots-route.test.ts`에서 `supabase.storage.from().upload()`, `.getPublicUrl()` 모두 mock 처리
+  - 테스트는 UUID 검증, 인증, rate limiting, magic bytes, 버전 증가, 에러 핸들링만 검증
+  - **버킷 public/private 설정이 URL 접근성에 미치는 영향**은 테스트 범위 밖
+  - Unit test가 infrastructure 레벨 설정(RLS policy, bucket visibility)을 검증할 수 없는 구조적 한계
+- **하네스 개선안**:
+  1. **배포 후 스모크 테스트에 이미지 URL 접근성 검증 추가**: 업로드 후 `getPublicUrl()` 결과를 실제 HTTP GET으로 200 확인
+  2. **Storage integration test 카테고리 신설**: mock 없이 로컬 Supabase에서 실제 버킷 접근성 테스트
+  3. **migration 검증 규칙**: `storage.buckets` 테이블 변경하는 migration 감지 시 "인증 방식과 호환되는지" 경고
+  4. **security-agent가 버킷 변경 시 인증 흐름 크로스체크**: iron-session 프로젝트에서 버킷 private 전환 → "브라우저 직접 접근 불가" 자동 경고
+  5. **post-migration 훅**: migration 적용 후 자동으로 주요 기능(이미지 표시, 파일 다운로드) 스모크 테스트
+
 ### HARNESS-046: CSRF rejected — 리버스 프록시 뒤에서 Origin 불일치
 - **Status**: Resolved
 - **Priority**: P0

@@ -35,6 +35,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Copy build output + production deps (simpler than standalone)
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/next.config.ts ./next.config.ts
 COPY --from=builder /app/.next ./.next
 COPY --from=deps /app/node_modules ./node_modules
 
