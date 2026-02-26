@@ -65,6 +65,7 @@
   },
   "protected_paths": {
     "paths": [
+      ".harness/",
       "harness/",
       "hooks/",
       "architecture/",

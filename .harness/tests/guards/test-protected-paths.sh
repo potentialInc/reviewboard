@@ -4,6 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOOK="$SCRIPT_DIR/hooks/pre-edit-arch-check.sh"
 
 echo "[guard] Testing protected path blocking..."
@@ -47,7 +48,7 @@ fi
 
 # Test 4: Editing .claude/ should be BLOCKED (exit 2)
 echo "  Testing: .claude/settings.json should be blocked..."
-"$HOOK" "$SCRIPT_DIR/.claude/settings.json" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
+"$HOOK" "$REPO_ROOT/.claude/settings.json" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
 if [ "$EXIT_CODE" -eq 2 ]; then
   echo "  [PASS] .claude/settings.json blocked (exit 2)"
 else
@@ -57,7 +58,7 @@ fi
 
 # Test 5: Editing CLAUDE.md should be BLOCKED (exit 2)
 echo "  Testing: CLAUDE.md should be blocked..."
-"$HOOK" "$SCRIPT_DIR/CLAUDE.md" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
+"$HOOK" "$REPO_ROOT/CLAUDE.md" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
 if [ "$EXIT_CODE" -eq 2 ]; then
   echo "  [PASS] CLAUDE.md blocked (exit 2)"
 else
@@ -67,7 +68,7 @@ fi
 
 # Test 6: Editing src/ should be ALLOWED (exit 0)
 echo "  Testing: src/service/foo.ts should be allowed (non-protected)..."
-"$HOOK" "$SCRIPT_DIR/src/service/foo.ts" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
+"$HOOK" "$REPO_ROOT/app/src/service/foo.ts" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
 if [ "$EXIT_CODE" -eq 0 ]; then
   echo "  [PASS] src/service/foo.ts allowed (exit 0)"
 else
@@ -77,7 +78,7 @@ fi
 
 # Test 7: Editing a non-protected path should be ALLOWED (exit 0)
 echo "  Testing: prd/prd-auth.md should be allowed (non-protected)..."
-"$HOOK" "$SCRIPT_DIR/prd/prd-auth.md" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
+"$HOOK" "$REPO_ROOT/prd/prd-auth.md" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
 if [ "$EXIT_CODE" -eq 0 ]; then
   echo "  [PASS] prd/prd-auth.md allowed (exit 0)"
 else

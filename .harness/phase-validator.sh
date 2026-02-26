@@ -161,7 +161,6 @@ case "$PHASE" in
   test)
     # Test files
     if any_file_matches "*.test.ts" || any_file_matches "*.spec.ts" || any_file_matches "*.test.js" || any_file_matches "test_*.py" || any_file_matches "*_test.go"; then
-      local test_count
       test_count=$(find "$PROJECT_ROOT" -name "*.test.ts" -o -name "*.spec.ts" -o -name "*.test.js" -o -name "test_*.py" -o -name "*_test.go" 2>/dev/null | grep -v node_modules | grep -v ".git" | wc -l | tr -d ' ')
       pass "Test files found (${test_count} file(s))"
     else
@@ -227,7 +226,8 @@ case "$PHASE" in
     ;;
 
   prd)
-    if find "$SCRIPT_DIR/prd" -name "prd-*.md" 2>/dev/null | head -1 | grep -q .; then
+    HARNESS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if find "$HARNESS_DIR/prd" -name "prd-*.md" 2>/dev/null | head -1 | grep -q .; then
       pass "PRD file found in prd/"
     else
       fail "No PRD file found in prd/"

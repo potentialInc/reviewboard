@@ -9,6 +9,7 @@ import { CommentForm } from '@/components/feedback/comment-form';
 import { CommentPanel } from '@/components/feedback/comment-panel';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/components/ui/toast';
+import { useTranslation } from '@/lib/i18n/context';
 import type { Comment } from '@/lib/types';
 
 interface ScreenshotVersion {
@@ -27,6 +28,7 @@ interface ScreenData {
 }
 
 export default function FeedbackViewerPage() {
+  const { t } = useTranslation();
   const { id: projectId, screenId } = useParams<{ id: string; screenId: string }>();
   const { toast } = useToast();
 
@@ -96,13 +98,13 @@ export default function FeedbackViewerPage() {
     });
 
     if (res.ok) {
-      toast('Feedback submitted!', 'success');
+      toast(t('toast.feedbackSubmitted'), 'success');
       setNewPin(null);
       await fetchScreen();
     } else {
-      toast('Failed to submit feedback', 'error');
+      toast(t('toast.feedbackFailed'), 'error');
     }
-  }, [currentVersion, newPin, toast, fetchScreen]);
+  }, [currentVersion, newPin, toast, fetchScreen, t]);
 
   const handleReply = useCallback(async (commentId: string, text: string) => {
     const res = await fetch(`/api/comments/${commentId}/replies`, {
@@ -111,10 +113,10 @@ export default function FeedbackViewerPage() {
       body: JSON.stringify({ text }),
     });
     if (res.ok) {
-      toast('Reply added', 'success');
+      toast(t('toast.replyAdded'), 'success');
       await fetchScreen();
     }
-  }, [toast, fetchScreen]);
+  }, [toast, fetchScreen, t]);
 
   if (loading) {
     return (
@@ -128,25 +130,25 @@ export default function FeedbackViewerPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <AlertCircle className="w-16 h-16 text-status-open mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">Failed to load screen</h2>
+        <h2 className="text-xl font-semibold text-foreground mb-2">{t('viewer.loadFailed')}</h2>
         <p className="text-muted mb-4">{error}</p>
         <button
           onClick={() => { setLoading(true); fetchScreen().finally(() => setLoading(false)); }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl font-medium hover:bg-primary-hover transition-colors"
         >
-          <RefreshCw className="w-4 h-4" /> Retry
+          <RefreshCw className="w-4 h-4" /> {t('common.retry')}
         </button>
       </div>
     );
   }
 
-  if (!screen) return <p>Screen not found</p>;
+  if (!screen) return <p>{t('viewer.notFound')}</p>;
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)]">
       {/* Breadcrumb */}
       <Breadcrumb items={[
-        { label: 'Projects', href: '/client/projects' },
+        { label: t('nav.projects'), href: '/client/projects' },
         { label: screen.project.name, href: `/client/projects/${projectId}/screens` },
         { label: screen.name },
       ]} />
@@ -166,7 +168,7 @@ export default function FeedbackViewerPage() {
             <div className="flex items-center gap-2 text-xs text-slate-500">
               {currentVersion && (
                 <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-medium">
-                  v{currentVersion.version}{currentVersion.id === screen.latest_version?.id ? ' (Latest)' : ''}
+                  v{currentVersion.version}{currentVersion.id === screen.latest_version?.id ? ` (${t('viewer.latest')})` : ''}
                 </span>
               )}
             </div>
@@ -200,7 +202,7 @@ export default function FeedbackViewerPage() {
                       v.id === selectedVersion ? 'text-primary font-medium' : ''
                     }`}
                   >
-                    v{v.version} {v.id === screen.latest_version?.id && '(latest)'}
+                    v{v.version} {v.id === screen.latest_version?.id && `(${t('viewer.latest')})`}
                   </button>
                 ))}
               </div>
@@ -233,7 +235,7 @@ export default function FeedbackViewerPage() {
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-muted">
-              No screenshot uploaded yet
+              {t('viewer.noScreenshot')}
             </div>
           )}
         </div>
@@ -243,14 +245,14 @@ export default function FeedbackViewerPage() {
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-800 flex items-center">
-                Feedback
+                {t('viewer.feedback')}
                 <span className="bg-slate-100 text-slate-600 text-xs font-medium rounded-full px-2 py-0.5 ml-2">
-                  {currentVersion?.comments?.length || 0} Items
+                  {currentVersion?.comments?.length || 0} {t('viewer.items')}
                 </span>
               </h3>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-light text-primary text-xs font-medium rounded-full">
                 <MousePointer className="w-3 h-3" />
-                Click anywhere to comment
+                {t('viewer.clickToComment')}
               </span>
             </div>
           </div>

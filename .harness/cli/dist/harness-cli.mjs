@@ -42,6 +42,13 @@ function findProjectRoot(startDir) {
   }
   return process.cwd();
 }
+function findRepoRoot(harnessRoot) {
+  const parent = resolve(harnessRoot, "..");
+  if (existsSync(resolve(parent, ".harness")) && existsSync(resolve(parent, "CLAUDE.md"))) {
+    return parent;
+  }
+  return harnessRoot;
+}
 
 // src/utils/logger.ts
 var COLORS = {
@@ -340,13 +347,22 @@ function checkBootstrap(projectRoot) {
     pass: nonExec.length === 0 && hookFiles.length > 0,
     detail: nonExec.length > 0 ? `${nonExec.length} hook(s) not executable` : void 0
   });
-  const settingsPath = resolve3(projectRoot, ".claude/settings.json");
-  let missingHooks = [];
-  if (existsSync3(settingsPath)) {
-    const settingsRaw = readFileSync3(settingsPath, "utf-8");
-    missingHooks = CRITICAL_HOOKS.filter((h) => !settingsRaw.includes(h));
-  } else {
-    missingHooks = CRITICAL_HOOKS;
+  const repoRoot = findRepoRoot(projectRoot);
+  const settingsPaths = [
+    resolve3(repoRoot, ".claude/settings.json"),
+    resolve3(repoRoot, ".claude/settings.local.json"),
+    resolve3(projectRoot, ".claude/settings.json"),
+    resolve3(projectRoot, ".claude/settings.local.json")
+  ];
+  let missingHooks = CRITICAL_HOOKS;
+  for (const sp of settingsPaths) {
+    if (existsSync3(sp)) {
+      const settingsRaw = readFileSync3(sp, "utf-8");
+      const missing = CRITICAL_HOOKS.filter((h) => !settingsRaw.includes(h));
+      if (missing.length < missingHooks.length) {
+        missingHooks = missing;
+      }
+    }
   }
   results.push({
     id: "S0-07",
@@ -527,6 +543,7 @@ import { resolve as resolve5 } from "node:path";
 function checkProtectedPaths(projectRoot) {
   const results = [];
   const hook = resolve5(projectRoot, "hooks/pre-edit-arch-check.sh");
+  const repoRoot = findRepoRoot(projectRoot);
   if (!isExecutable(hook)) {
     return [{
       id: "S2-00",
@@ -535,8 +552,9 @@ function checkProtectedPaths(projectRoot) {
       detail: "Hook not found or not executable"
     }];
   }
-  function testPath(id, desc, testPath2, expectedExit) {
-    const fullPath = testPath2.startsWith("/") ? testPath2 : resolve5(projectRoot, testPath2);
+  function testPath(id, desc, testPath2, expectedExit, root) {
+    const base = root ?? projectRoot;
+    const fullPath = testPath2.startsWith("/") ? testPath2 : resolve5(base, testPath2);
     const { exitCode } = runCommand(`"${hook}" "${fullPath}"`, { cwd: projectRoot });
     return {
       id,
@@ -545,14 +563,14 @@ function checkProtectedPaths(projectRoot) {
       detail: exitCode !== expectedExit ? `exit ${exitCode}, expected ${expectedExit}` : void 0
     };
   }
-  results.push(testPath("S2-01", "harness/ edit blocked (exit 2)", "harness/auto-fix-loop.sh", 2));
+  results.push(testPath("S2-01", "harness/ edit blocked (exit 2)", "auto-fix-loop.sh", 2));
   results.push(testPath("S2-02", "hooks/ edit blocked (exit 2)", "hooks/session-start.sh", 2));
   results.push(testPath("S2-03", "architecture/ edit blocked (exit 2)", "architecture/rules.json", 2));
-  results.push(testPath("S2-04", ".claude/ edit blocked (exit 2)", ".claude/settings.json", 2));
-  results.push(testPath("S2-05", "CLAUDE.md edit blocked (exit 2)", "CLAUDE.md", 2));
-  results.push(testPath("S2-06", "Path traversal (../) blocked", "src/../harness/core.sh", 2));
-  results.push(testPath("S2-07", "Deep traversal (../../) blocked", "src/types/../../hooks/hook.sh", 2));
-  results.push(testPath("S2-08", "Non-protected path allowed (exit 0)", "src/service/foo.ts", 0));
+  results.push(testPath("S2-04", ".claude/ edit blocked (exit 2)", ".claude/settings.json", 2, repoRoot));
+  results.push(testPath("S2-05", "CLAUDE.md edit blocked (exit 2)", "CLAUDE.md", 2, repoRoot));
+  results.push(testPath("S2-06", "Path traversal (../) blocked", "app/../.harness/auto-fix-loop.sh", 2, repoRoot));
+  results.push(testPath("S2-07", "Deep traversal (../../) blocked", "app/src/../../.harness/hooks/hook.sh", 2, repoRoot));
+  results.push(testPath("S2-08", "Non-protected path allowed (exit 0)", "app/src/service/foo.ts", 0, repoRoot));
   return results;
 }
 
@@ -561,7 +579,7 @@ import { readFileSync as readFileSync4, existsSync as existsSync5 } from "node:f
 import { resolve as resolve6 } from "node:path";
 function checkAutoFixLoop(projectRoot) {
   const results = [];
-  const scriptPath = resolve6(projectRoot, "harness/auto-fix-loop.sh");
+  const scriptPath = resolve6(projectRoot, "auto-fix-loop.sh");
   if (!existsSync5(scriptPath)) {
     return [{
       id: "S3-00",
@@ -622,7 +640,7 @@ import { readFileSync as readFileSync5, existsSync as existsSync6 } from "node:f
 import { resolve as resolve7 } from "node:path";
 function checkOrchestrator(projectRoot) {
   const results = [];
-  const scriptPath = resolve7(projectRoot, "harness/orchestrator.sh");
+  const scriptPath = resolve7(projectRoot, "orchestrator.sh");
   if (!existsSync6(scriptPath)) {
     return [{
       id: "S4-00",
@@ -880,7 +898,7 @@ import { readFileSync as readFileSync8 } from "node:fs";
 // src/core/rules.ts
 import { readFileSync as readFileSync7, existsSync as existsSync9 } from "node:fs";
 import { resolve as resolve11 } from "node:path";
-var INLINE_PROTECTED = ["harness/", "hooks/", "architecture/", ".claude/", "CLAUDE.md"];
+var INLINE_PROTECTED = [".harness/", "harness/", "hooks/", "architecture/", ".claude/", "CLAUDE.md"];
 function loadProtectedPathsTxt(projectRoot) {
   const txtPath = resolve11(projectRoot, "architecture/protected-paths.txt");
   if (!existsSync9(txtPath)) return INLINE_PROTECTED;
@@ -1039,7 +1057,8 @@ function bashGuard(projectRoot) {
   try {
     input = readFileSync8(0, "utf-8");
   } catch {
-    return 0;
+    process.stderr.write("[bash-guard] ERROR: Could not read stdin. Blocking for safety.\n");
+    return 2;
   }
   if (!input.trim()) return 0;
   let command2 = "";
@@ -1048,8 +1067,8 @@ function bashGuard(projectRoot) {
     const raw = parsed?.tool_input?.command;
     command2 = typeof raw === "string" ? raw : "";
   } catch {
-    process.stderr.write("[bash-guard] Warning: could not parse stdin JSON\n");
-    return 0;
+    process.stderr.write("[bash-guard] ERROR: Could not parse stdin JSON. Blocking for safety.\n");
+    return 2;
   }
   if (!command2) return 0;
   const networkResult = checkNetworkCommand(command2);
@@ -1150,8 +1169,9 @@ import { resolve as resolve13 } from "node:path";
 var LAYERS = ["types", "config", "repo", "service", "runtime", "ui"];
 function pathCheck(projectRoot, filePath) {
   const rules = loadRules(projectRoot);
-  const absolutePath = filePath.startsWith("/") ? filePath : resolve13(projectRoot, filePath);
-  const relPath = computeRelativePath(absolutePath, projectRoot);
+  const repoRoot = findRepoRoot(projectRoot);
+  const absolutePath = filePath.startsWith("/") ? filePath : resolve13(repoRoot, filePath);
+  const relPath = computeRelativePath(absolutePath, repoRoot);
   const result = isProtectedPath(relPath, rules);
   if (result.blocked) {
     console.log(`[arch-check] BLOCKED: '${relPath}' is a protected harness path.`);

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/components/ui/toast';
+import { useTranslation } from '@/lib/i18n/context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScreenCard } from '@/components/admin/project-detail/screen-card';
 import {
@@ -22,6 +23,7 @@ export default function AdminProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ export default function AdminProjectDetailPage() {
       body: JSON.stringify({ name }),
     });
     if (res.ok) {
-      toast('Screen added', 'success');
+      toast(t('toast.screenAdded'), 'success');
       setShowAddScreen(false);
       await fetchProject();
     }
@@ -75,15 +77,15 @@ export default function AdminProjectDetailPage() {
         body: formData,
       });
       if (res.ok) {
-        toast('Screenshot uploaded', 'success');
+        toast(t('toast.screenshotUploaded'), 'success');
         setShowUpload(null);
         await fetchProject();
       } else {
-        toast('Upload failed', 'error');
+        toast(t('toast.uploadFailed'), 'error');
       }
     } catch {
       // FIX: catch network errors to prevent `uploading` stuck at true
-      toast('Network error. Please try again.', 'error');
+      toast(t('toast.networkError'), 'error');
     } finally {
       setUploading(false);
     }
@@ -92,7 +94,7 @@ export default function AdminProjectDetailPage() {
   const handleDeleteScreen = async (screenId: string) => {
     const res = await fetch(`/api/screens/${screenId}`, { method: 'DELETE' });
     if (res.ok) {
-      toast('Screen deleted', 'success');
+      toast(t('toast.screenDeleted'), 'success');
       setShowDeleteScreen(null);
       await fetchProject();
     }
@@ -114,9 +116,9 @@ export default function AdminProjectDetailPage() {
   if (!project) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted">Project not found</p>
+        <p className="text-muted">{t('projectDetail.notFound')}</p>
         <button onClick={() => router.push('/admin/projects')} className="mt-2 text-primary text-sm">
-          Back to projects
+          {t('projectDetail.backToProjects')}
         </button>
       </div>
     );
@@ -125,8 +127,8 @@ export default function AdminProjectDetailPage() {
   return (
     <div>
       <Breadcrumb items={[
-        { label: 'Dashboard', href: '/admin' },
-        { label: 'Projects', href: '/admin/projects' },
+        { label: t('nav.dashboard'), href: '/admin' },
+        { label: t('nav.projects'), href: '/admin/projects' },
         { label: project.name },
       ]} />
 
@@ -160,7 +162,7 @@ export default function AdminProjectDetailPage() {
           onClick={() => setShowAddScreen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all"
         >
-          <Plus className="w-4 h-4" /> Add Screen
+          <Plus className="w-4 h-4" /> {t('projectDetail.addScreen')}
         </button>
       </div>
 
@@ -172,7 +174,7 @@ export default function AdminProjectDetailPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search screens by name..."
+            placeholder={t('projectDetail.searchScreens')}
             aria-label="Search screens"
             className="w-full pl-10 pr-4 py-2 rounded-lg border-none focus:ring-0 text-sm placeholder-slate-400"
           />
@@ -190,7 +192,7 @@ export default function AdminProjectDetailPage() {
 
       {/* Section heading */}
       <p className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4">
-        PROJECT SCREENS
+        {t('projectDetail.projectScreens')}
       </p>
 
       {project.screens.length === 0 ? (
@@ -202,8 +204,8 @@ export default function AdminProjectDetailPage() {
             <line x1="40" y1="45" x2="80" y2="45" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
             <line x1="45" y1="55" x2="75" y2="55" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3" />
           </svg>
-          <p className="text-muted font-medium mb-1">No screens yet</p>
-          <p className="text-sm text-muted">Add a screen to start collecting feedback.</p>
+          <p className="text-muted font-medium mb-1">{t('projectDetail.noScreens')}</p>
+          <p className="text-sm text-muted">{t('projectDetail.noScreensHint')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -225,7 +227,7 @@ export default function AdminProjectDetailPage() {
             <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
               <Plus className="w-6 h-6 text-slate-400 group-hover:text-primary" />
             </div>
-            <span className="text-sm font-medium text-slate-500 group-hover:text-primary">Add Screen</span>
+            <span className="text-sm font-medium text-slate-500 group-hover:text-primary">{t('projectDetail.addScreen')}</span>
           </button>
         </div>
       )}

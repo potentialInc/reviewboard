@@ -9,7 +9,7 @@ import { isExecutable } from "../../utils/fs.ts";
  */
 export function checkOrchestrator(projectRoot: string): CheckResult[] {
   const results: CheckResult[] = [];
-  const scriptPath = resolve(projectRoot, "harness/orchestrator.sh");
+  const scriptPath = resolve(projectRoot, "orchestrator.sh");
 
   if (!existsSync(scriptPath)) {
     return [{

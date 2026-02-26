@@ -1,4 +1,8 @@
+'use client';
+
 import type { FeedbackStatus } from '@/lib/types';
+import type { TranslationKey } from '@/lib/i18n/translations';
+import { useTranslation } from '@/lib/i18n/context';
 
 const statusStyles: Record<FeedbackStatus, string> = {
   'open': 'bg-status-open-bg text-status-open',
@@ -6,16 +10,17 @@ const statusStyles: Record<FeedbackStatus, string> = {
   'resolved': 'bg-status-resolved-bg text-status-resolved',
 };
 
-const statusLabels: Record<FeedbackStatus, string> = {
-  'open': 'Open',
-  'in-progress': 'In Progress',
-  'resolved': 'Resolved',
+const statusLabelKeys: Record<FeedbackStatus, TranslationKey> = {
+  'open': 'common.open',
+  'in-progress': 'common.inProgress',
+  'resolved': 'common.resolved',
 };
 
 export function StatusBadge({ status }: { status: FeedbackStatus }) {
+  const { t } = useTranslation();
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[status]}`}>
-      {statusLabels[status]}
+      {t(statusLabelKeys[status])}
     </span>
   );
 }

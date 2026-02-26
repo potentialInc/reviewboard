@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FolderKanban, Monitor, MessageSquare, AlertCircle, RefreshCw, ImageIcon } from 'lucide-react';
 import { CardSkeleton } from '@/components/ui/skeleton';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface ProjectItem {
   id: string;
@@ -15,6 +16,7 @@ interface ProjectItem {
 }
 
 export default function ClientProjectsPage() {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +43,8 @@ export default function ClientProjectsPage() {
     return (
       <div>
         <div className="mb-8">
-          <h1 className="text-2xl font-bold font-jakarta">Assigned Projects</h1>
-          <p className="text-muted mt-1">Select a project to view designs and leave feedback.</p>
+          <h1 className="text-2xl font-bold font-jakarta">{t('clientProjects.title')}</h1>
+          <p className="text-muted mt-1">{t('clientProjects.subtitle')}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => <CardSkeleton key={i} />)}
@@ -55,13 +57,13 @@ export default function ClientProjectsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <AlertCircle className="w-16 h-16 text-status-open mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">Failed to load projects</h2>
+        <h2 className="text-xl font-semibold text-foreground mb-2">{t('clientProjects.loadFailed')}</h2>
         <p className="text-muted mb-4">{error}</p>
         <button
           onClick={() => { setLoading(true); fetchProjects(); }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl font-medium hover:bg-primary-hover transition-colors"
         >
-          <RefreshCw className="w-4 h-4" /> Retry
+          <RefreshCw className="w-4 h-4" /> {t('common.retry')}
         </button>
       </div>
     );
@@ -71,18 +73,18 @@ export default function ClientProjectsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <FolderKanban className="w-16 h-16 text-gray-300 mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">No projects assigned yet.</h2>
-        <p className="text-muted">Contact your administrator to get access.</p>
+        <h2 className="text-xl font-semibold text-foreground mb-2">{t('clientProjects.noProjects')}</h2>
+        <p className="text-muted">{t('clientProjects.noProjectsHint')}</p>
       </div>
     );
   }
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Projects' }]} />
+      <Breadcrumb items={[{ label: t('nav.projects') }]} />
       <div className="mb-8">
-        <h1 className="text-2xl font-bold font-jakarta">Assigned Projects</h1>
-        <p className="text-muted mt-1">Select a project to view designs and leave feedback.</p>
+        <h1 className="text-2xl font-bold font-jakarta">{t('clientProjects.title')}</h1>
+        <p className="text-muted mt-1">{t('clientProjects.subtitle')}</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects.map((p) => (
@@ -96,19 +98,19 @@ export default function ClientProjectsPage() {
               <div className="w-12 h-12 rounded-xl bg-indigo-50 text-primary flex items-center justify-center">
                 <Monitor className="w-6 h-6" />
               </div>
-              <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200">Active</span>
+              <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200">{t('clientProjects.active')}</span>
             </div>
             <h3 className="text-lg font-bold font-jakarta text-slate-900 group-hover:text-primary transition-colors">{p.name}</h3>
             <div className="flex items-center justify-between mt-4 border-t border-slate-100 pt-4 text-sm text-slate-600">
               <span className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-slate-400" /> {p.screen_count} Screens
+                <ImageIcon className="w-4 h-4 text-slate-400" /> {p.screen_count} {t('clientProjects.screens')}
               </span>
               <span className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-slate-400" /> {p.open_feedback_count} Open Items
+                <MessageSquare className="w-4 h-4 text-slate-400" /> {p.open_feedback_count} {t('clientProjects.openItems')}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-4">
-              Updated {new Date(p.updated_at).toLocaleDateString()}
+              {t('clientProjects.updated')} {new Date(p.updated_at).toLocaleDateString()}
             </p>
           </Link>
         ))}

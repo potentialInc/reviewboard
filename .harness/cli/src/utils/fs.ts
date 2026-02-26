@@ -43,7 +43,9 @@ export function listFiles(dirPath: string, pattern?: RegExp): string[] {
 }
 
 /**
- * Resolve project root from a starting directory (walks up to find CLAUDE.md).
+ * Resolve project root (harness root) from a starting directory.
+ * Walks up to find CLAUDE.md + harness.config.json.
+ * Returns the harness root where config files live.
  */
 export function findProjectRoot(startDir?: string): string {
   let dir = startDir ?? process.cwd();
@@ -56,4 +58,17 @@ export function findProjectRoot(startDir?: string): string {
     dir = parent;
   }
   return process.cwd();
+}
+
+/**
+ * Find the git repo root from the harness root.
+ * In nested layout (.harness/), the repo root is one level up.
+ * In flat layout, repo root = harness root.
+ */
+export function findRepoRoot(harnessRoot: string): string {
+  const parent = resolve(harnessRoot, "..");
+  if (existsSync(resolve(parent, ".harness")) && existsSync(resolve(parent, "CLAUDE.md"))) {
+    return parent;
+  }
+  return harnessRoot;
 }

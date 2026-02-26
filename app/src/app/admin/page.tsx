@@ -8,6 +8,8 @@ import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { formatDistanceToNow } from 'date-fns';
+import { useTranslation } from '@/lib/i18n/context';
+import type { TranslationKey } from '@/lib/i18n/translations';
 
 interface DashboardData {
   stats: {
@@ -27,42 +29,50 @@ interface DashboardData {
   }[];
 }
 
-const statCards = [
+const statCards: readonly {
+  key: 'total_projects' | 'total_open_feedback' | 'feedback_today' | 'feedback_this_week';
+  labelKey: TranslationKey;
+  icon: typeof FolderKanban;
+  iconColor: string;
+  numberColor: string;
+  trendKey: TranslationKey;
+}[] = [
   {
     key: 'total_projects',
-    label: 'Total Projects',
+    labelKey: 'dashboard.totalProjects',
     icon: FolderKanban,
     iconColor: 'text-primary bg-primary-light',
     numberColor: '',
-    trend: 'All time',
+    trendKey: 'dashboard.allTime',
   },
   {
     key: 'total_open_feedback',
-    label: 'Open Feedback',
+    labelKey: 'dashboard.openFeedback',
     icon: MessageSquare,
     iconColor: 'text-red-500 bg-red-50',
     numberColor: 'text-red-500',
-    trend: 'Needs attention',
+    trendKey: 'dashboard.needsAttention',
   },
   {
     key: 'feedback_today',
-    label: 'Today',
+    labelKey: 'dashboard.today',
     icon: Clock,
     iconColor: 'text-purple-600 bg-purple-50',
     numberColor: '',
-    trend: 'Last 24 hours',
+    trendKey: 'dashboard.last24h',
   },
   {
     key: 'feedback_this_week',
-    label: 'This Week',
+    labelKey: 'dashboard.thisWeek',
     icon: TrendingUp,
     iconColor: 'text-green-500 bg-green-50',
     numberColor: 'text-green-500',
-    trend: 'Last 7 days',
+    trendKey: 'dashboard.last7d',
   },
-] as const;
+];
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,26 +87,26 @@ export default function AdminDashboard() {
       .then((d) => { setData(d); setError(null); })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
-        toast('Failed to load dashboard', 'error');
+        toast(t('dashboard.loadFailed'), 'error');
       })
       .finally(() => setLoading(false));
   }, [toast]);
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Dashboard' }]} />
+      <Breadcrumb items={[{ label: t('nav.dashboard') }]} />
 
       <div className="flex items-center justify-between mb-10">
         <div>
-          <h1 className="text-3xl font-bold font-jakarta text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Overview of all active projects and feedback status.</p>
+          <h1 className="text-3xl font-bold font-jakarta text-slate-900">{t('dashboard.title')}</h1>
+          <p className="text-slate-500 mt-1">{t('dashboard.subtitle')}</p>
         </div>
         <Link
           href="/admin/projects/new"
           className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-hover"
         >
           <Plus className="w-4 h-4" />
-          New Project
+          {t('dashboard.newProject')}
         </Link>
       </div>
 
@@ -108,10 +118,10 @@ export default function AdminDashboard() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {statCards.map(({ key, label, icon: Icon, iconColor, numberColor, trend }) => (
+        {statCards.map(({ key, labelKey, icon: Icon, iconColor, numberColor, trendKey }) => (
           <div key={key} className="bg-card rounded-2xl border border-border shadow-sm p-6">
             <div className="flex items-start justify-between mb-4">
-              <span className="text-sm font-medium text-muted">{label}</span>
+              <span className="text-sm font-medium text-muted">{t(labelKey)}</span>
               <div className={`p-2 rounded-lg flex items-center justify-center ${iconColor}`}>
                 <Icon className="w-5 h-5" aria-hidden="true" />
               </div>
@@ -123,7 +133,7 @@ export default function AdminDashboard() {
                 {data?.stats[key] ?? 0}
               </p>
             )}
-            <p className="text-xs text-muted mt-1">{trend}</p>
+            <p className="text-xs text-muted mt-1">{t(trendKey)}</p>
           </div>
         ))}
       </div>
@@ -131,9 +141,9 @@ export default function AdminDashboard() {
       {/* Recent activity */}
       <div className="bg-card rounded-2xl border border-border shadow-sm">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-lg font-bold font-jakarta text-slate-900">Recent Activity</h2>
+          <h2 className="text-lg font-bold font-jakarta text-slate-900">{t('dashboard.recentActivity')}</h2>
           <Link href="/admin/feedback" className="text-sm text-primary font-medium hover:underline">
-            View All
+            {t('dashboard.viewAll')}
           </Link>
         </div>
         <div className="divide-y divide-slate-100">
@@ -149,7 +159,7 @@ export default function AdminDashboard() {
             ))
           ) : data?.recent_activity.length === 0 ? (
             <div className="px-6 py-12 text-center text-muted">
-              No recent activity
+              {t('dashboard.noActivity')}
             </div>
           ) : (
             data?.recent_activity.map((item) => (

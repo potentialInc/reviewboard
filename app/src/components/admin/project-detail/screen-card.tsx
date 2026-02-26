@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { Monitor, RefreshCw, Trash2 } from 'lucide-react';
 import type { ScreenItem } from '@/lib/types';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface ScreenCardProps {
   screen: ScreenItem;
@@ -12,6 +13,7 @@ interface ScreenCardProps {
 }
 
 export function ScreenCard({ screen, onUpload, onDelete }: ScreenCardProps) {
+  const { t } = useTranslation();
   return (
     <div className="group bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all">
       <div className="aspect-[9/16] bg-slate-100 relative">
@@ -54,7 +56,7 @@ export function ScreenCard({ screen, onUpload, onDelete }: ScreenCardProps) {
           <h3 className="font-medium text-slate-900 text-sm truncate">{screen.name}</h3>
           {screen.open_feedback_count > 0 && (
             <span className="text-xs font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">
-              {screen.open_feedback_count} Open
+              {screen.open_feedback_count} {t('common.open')}
             </span>
           )}
         </div>

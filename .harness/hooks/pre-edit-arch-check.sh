@@ -10,9 +10,10 @@
 set -euo pipefail
 
 FILE_PATH="${1:-}"
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CLI_BUNDLE="$PROJECT_ROOT/cli/dist/harness-cli.mjs"
-CLI_SRC="$PROJECT_ROOT/cli/src/index.ts"
+HARNESS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd "$HARNESS_ROOT/.." && pwd)"
+CLI_BUNDLE="$HARNESS_ROOT/cli/dist/harness-cli.mjs"
+CLI_SRC="$HARNESS_ROOT/cli/src/index.ts"
 
 # ── Tier 1: Built bundle (fastest, ~20ms) ──
 if [ -n "$FILE_PATH" ] && [ -f "$CLI_BUNDLE" ] && command -v node &>/dev/null; then
@@ -20,17 +21,17 @@ if [ -n "$FILE_PATH" ] && [ -f "$CLI_BUNDLE" ] && command -v node &>/dev/null; t
 fi
 
 # ── Tier 2: tsx direct execution (~80ms) ──
-TSX_BIN="$PROJECT_ROOT/cli/node_modules/.bin/tsx"
+TSX_BIN="$HARNESS_ROOT/cli/node_modules/.bin/tsx"
 if [ -n "$FILE_PATH" ] && [ -f "$CLI_SRC" ] && [ -x "$TSX_BIN" ]; then
   exec "$TSX_BIN" "$CLI_SRC" path check "$FILE_PATH"
 fi
 
 # ── Tier 3: Original shell logic ──
-RULES_FILE="$PROJECT_ROOT/architecture/rules.json"
+RULES_FILE="$HARNESS_ROOT/architecture/rules.json"
 
 # ─── Protected Path Check ───
 # Load from central file, fall back to inline list
-PROTECTED_PATHS_TXT="$PROJECT_ROOT/architecture/protected-paths.txt"
+PROTECTED_PATHS_TXT="$HARNESS_ROOT/architecture/protected-paths.txt"
 HARDCODED_PROTECTED=()
 if [ -f "$PROTECTED_PATHS_TXT" ]; then
   while IFS= read -r _line; do

@@ -1,0 +1,5 @@
+{"timestamp":"2026-02-25T09:25:44Z","command":"cd /Users/jis/Documents/Potentialai/Projects/reviewboard/app && npm run build","attempt":1,"success":true,"guard_result":0}
+{"timestamp":"2026-02-25T09:37:48Z","command":"cd app && npx next build","attempt":1,"success":true,"guard_result":2}
+{"timestamp":"2026-02-25T09:38:06Z","command":"cd app && npx vitest run","attempt":1,"success":false,"guard_result":2}
+{"timestamp":"2026-02-25T09:38:09Z","command":"cd app && npx vitest run","attempt":2,"success":false,"guard_result":2}
+{"timestamp":"2026-02-25T09:38:13Z","command":"cd app && npx vitest run","attempt":3,"success":false,"guard_result":2}

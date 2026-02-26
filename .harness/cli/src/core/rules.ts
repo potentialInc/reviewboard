@@ -12,7 +12,7 @@ export interface ArchRules {
   };
 }
 
-const INLINE_PROTECTED = ["harness/", "hooks/", "architecture/", ".claude/", "CLAUDE.md"];
+const INLINE_PROTECTED = [".harness/", "harness/", "hooks/", "architecture/", ".claude/", "CLAUDE.md"];
 
 function loadProtectedPathsTxt(projectRoot: string): string[] {
   const txtPath = resolve(projectRoot, "architecture/protected-paths.txt");

@@ -15,8 +15,9 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PRD_DIR="$SCRIPT_DIR/prd"
+HARNESS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$HARNESS_ROOT/.." && pwd)"
+PRD_DIR="$HARNESS_ROOT/prd"
 MODE="${1:-}"
 
 # If explicit filename given (not a flag), use it directly

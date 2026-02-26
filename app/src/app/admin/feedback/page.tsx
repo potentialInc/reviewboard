@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/components/ui/toast';
+import { useTranslation } from '@/lib/i18n/context';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { FeedbackDetailModal } from '@/components/feedback/detail-modal';
 import { FeedbackTable } from '@/components/admin/feedback/feedback-table';
@@ -13,6 +14,7 @@ const PER_PAGE_OPTIONS = [10, 25, 50];
 
 export default function AdminFeedbackPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [feedback, setFeedback] = useState<FeedbackListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -78,7 +80,7 @@ export default function AdminFeedbackPage() {
       setSelected(new Set());
       fetchFeedback();
     } else {
-      toast('Bulk update failed', 'error');
+      toast(t('toast.bulkUpdateFailed'), 'error');
     }
   };
 
@@ -98,7 +100,7 @@ export default function AdminFeedbackPage() {
       body: JSON.stringify({ status }),
     });
     if (res.ok) {
-      toast('Status updated', 'success');
+      toast(t('toast.statusUpdated'), 'success');
       fetchFeedback();
       if (selectedFeedback?.id === id) {
         setSelectedFeedback((prev) => prev ? { ...prev, status } : null);
@@ -115,11 +117,11 @@ export default function AdminFeedbackPage() {
       body: JSON.stringify({ text: replyText.trim() }),
     });
     if (res.ok) {
-      toast('Reply sent', 'success');
+      toast(t('toast.replySent'), 'success');
       setReplyText('');
       await handleViewDetail(selectedFeedback);
     } else {
-      toast('Failed to send reply', 'error');
+      toast(t('toast.replyFailed'), 'error');
     }
     setSending(false);
   };
@@ -128,10 +130,10 @@ export default function AdminFeedbackPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Dashboard', href: '/admin' }, { label: 'Feedback' }]} />
+      <Breadcrumb items={[{ label: t('nav.dashboard'), href: '/admin' }, { label: t('nav.feedback') }]} />
       <header className="mb-8">
-        <h1 className="text-2xl font-bold font-jakarta text-slate-900">Feedback Manager</h1>
-        <p className="text-slate-500 mt-1">Review and triage incoming feedback from all projects.</p>
+        <h1 className="text-2xl font-bold font-jakarta text-slate-900">{t('feedbackMgr.title')}</h1>
+        <p className="text-slate-500 mt-1">{t('feedbackMgr.subtitle')}</p>
       </header>
 
       {error && (
@@ -143,11 +145,11 @@ export default function AdminFeedbackPage() {
       {/* Bulk actions */}
       {selected.size > 0 && (
         <div className="flex items-center gap-3 mb-4 p-3 bg-primary/5 rounded-xl">
-          <span className="text-sm font-medium">{selected.size} selected</span>
-          <button onClick={() => handleBulkStatus('open')} className="px-3 py-1 text-xs font-medium bg-status-open-bg text-status-open rounded-full">Mark Open</button>
-          <button onClick={() => handleBulkStatus('in-progress')} className="px-3 py-1 text-xs font-medium bg-status-progress-bg text-status-progress rounded-full">In Progress</button>
-          <button onClick={() => handleBulkStatus('resolved')} className="px-3 py-1 text-xs font-medium bg-status-resolved-bg text-status-resolved rounded-full">Resolved</button>
-          <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted hover:text-foreground">Clear</button>
+          <span className="text-sm font-medium">{t('feedbackMgr.selected', selected.size)}</span>
+          <button onClick={() => handleBulkStatus('open')} className="px-3 py-1 text-xs font-medium bg-status-open-bg text-status-open rounded-full">{t('feedbackMgr.markOpen')}</button>
+          <button onClick={() => handleBulkStatus('in-progress')} className="px-3 py-1 text-xs font-medium bg-status-progress-bg text-status-progress rounded-full">{t('common.inProgress')}</button>
+          <button onClick={() => handleBulkStatus('resolved')} className="px-3 py-1 text-xs font-medium bg-status-resolved-bg text-status-resolved rounded-full">{t('common.resolved')}</button>
+          <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted hover:text-foreground">{t('feedbackMgr.clear')}</button>
         </div>
       )}
 
@@ -159,8 +161,8 @@ export default function AdminFeedbackPage() {
             type="text"
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search feedback..."
-            aria-label="Search feedback"
+            placeholder={t('feedbackMgr.searchPlaceholder')}
+            aria-label={t('feedbackMgr.searchPlaceholder')}
             className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
@@ -171,10 +173,10 @@ export default function AdminFeedbackPage() {
             aria-label="Filter by status"
             className="px-3 py-2 bg-slate-50 border border-border rounded-lg text-sm text-slate-700 outline-none focus:border-primary cursor-pointer"
           >
-            <option value="all">All Statuses</option>
-            <option value="open">Open</option>
-            <option value="in-progress">In Progress</option>
-            <option value="resolved">Resolved</option>
+            <option value="all">{t('common.allStatuses')}</option>
+            <option value="open">{t('common.open')}</option>
+            <option value="in-progress">{t('common.inProgress')}</option>
+            <option value="resolved">{t('common.resolved')}</option>
           </select>
         </div>
       </div>
@@ -192,8 +194,8 @@ export default function AdminFeedbackPage() {
               <line x1="30" y1="78" x2="90" y2="78" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3" />
               <line x1="35" y1="85" x2="85" y2="85" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.2" />
             </svg>
-            <p className="text-muted font-medium mb-1">No feedback found</p>
-            <p className="text-sm text-muted">Feedback from clients will appear here.</p>
+            <p className="text-muted font-medium mb-1">{t('feedbackMgr.noFeedback')}</p>
+            <p className="text-sm text-muted">{t('feedbackMgr.noFeedbackHint')}</p>
           </div>
         ) : (
           <FeedbackTable
@@ -209,7 +211,7 @@ export default function AdminFeedbackPage() {
         {total > 0 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-slate-50/50">
             <div className="flex items-center gap-2 text-sm text-muted">
-              <span>Show</span>
+              <span>{t('common.show')}</span>
               <select
                 value={perPage}
                 onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
@@ -220,7 +222,7 @@ export default function AdminFeedbackPage() {
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
-              <span>of {total}</span>
+              <span>{t('common.of')} {total}</span>
             </div>
             <div className="flex items-center gap-1">
               <button

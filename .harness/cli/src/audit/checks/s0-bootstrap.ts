@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { CheckResult } from "../runner.ts";
 import { commandExists } from "../../utils/shell.ts";
-import { isExecutable, listFiles } from "../../utils/fs.ts";
+import { isExecutable, listFiles, findRepoRoot } from "../../utils/fs.ts";
 import { loadConfig, validateConfig } from "../../core/config.ts";
 
 const CRITICAL_HOOKS = [
@@ -68,13 +68,22 @@ export function checkBootstrap(projectRoot: string): CheckResult[] {
   });
 
   // S0-07: Critical hooks wired in .claude/settings.json
-  const settingsPath = resolve(projectRoot, ".claude/settings.json");
-  let missingHooks: string[] = [];
-  if (existsSync(settingsPath)) {
-    const settingsRaw = readFileSync(settingsPath, "utf-8");
-    missingHooks = CRITICAL_HOOKS.filter((h) => !settingsRaw.includes(h));
-  } else {
-    missingHooks = CRITICAL_HOOKS;
+  const repoRoot = findRepoRoot(projectRoot);
+  const settingsPaths = [
+    resolve(repoRoot, ".claude/settings.json"),
+    resolve(repoRoot, ".claude/settings.local.json"),
+    resolve(projectRoot, ".claude/settings.json"),
+    resolve(projectRoot, ".claude/settings.local.json"),
+  ];
+  let missingHooks: string[] = CRITICAL_HOOKS;
+  for (const sp of settingsPaths) {
+    if (existsSync(sp)) {
+      const settingsRaw = readFileSync(sp, "utf-8");
+      const missing = CRITICAL_HOOKS.filter((h) => !settingsRaw.includes(h));
+      if (missing.length < missingHooks.length) {
+        missingHooks = missing;
+      }
+    }
   }
   results.push({
     id: "S0-07",

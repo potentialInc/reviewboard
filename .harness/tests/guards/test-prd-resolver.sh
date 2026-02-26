@@ -16,14 +16,23 @@ fi
 
 FAILED=0
 
-# Cleanup function to remove temp PRD files
-cleanup_test_prds() {
-  rm -f "$PRD_DIR/prd-test-alpha.md" "$PRD_DIR/prd-test-beta.md" 2>/dev/null || true
+# Stash existing PRD files so tests run in a clean directory
+STASH_DIR=$(mktemp -d)
+stash_existing_prds() {
+  for f in "$PRD_DIR"/prd-*.md; do
+    [ -f "$f" ] && mv "$f" "$STASH_DIR/"
+  done
 }
-trap cleanup_test_prds EXIT
+restore_existing_prds() {
+  rm -f "$PRD_DIR/prd-test-alpha.md" "$PRD_DIR/prd-test-beta.md" 2>/dev/null || true
+  for f in "$STASH_DIR"/prd-*.md; do
+    [ -f "$f" ] && mv "$f" "$PRD_DIR/"
+  done
+  rm -rf "$STASH_DIR"
+}
+trap restore_existing_prds EXIT
 
-# Ensure clean state (no leftover test files)
-cleanup_test_prds
+stash_existing_prds
 
 # Test 1: No prd-*.md files → exit 0 (graceful empty state)
 # (The project has template files but no prd-*.md files)
@@ -94,7 +103,7 @@ else
 fi
 
 # Test 5: --inject mode outputs prompt line
-cleanup_test_prds
+rm -f "$PRD_DIR/prd-test-alpha.md" "$PRD_DIR/prd-test-beta.md" 2>/dev/null || true
 cat > "$PRD_DIR/prd-test-alpha.md" << 'EOF'
 ---
 name: test-alpha

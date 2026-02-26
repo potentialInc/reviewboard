@@ -6,6 +6,7 @@ import { StatusBadge, getPinColor } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { formatDistanceToNow } from 'date-fns';
 import type { FeedbackStatus, Reply } from '@/lib/types';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface FeedbackItem {
   id: string;
@@ -44,8 +45,9 @@ export function FeedbackDetailModal({
   onReplyTextChange,
   onStatusChange,
 }: FeedbackDetailModalProps) {
+  const { t } = useTranslation();
   return (
-    <Modal open={!!feedback} onClose={onClose} title="Feedback Detail" size="5xl" bare>
+    <Modal open={!!feedback} onClose={onClose} title={t('feedbackDetail.title')} size="5xl" bare>
       <div className="flex flex-col md:flex-row h-[85vh]">
         {/* Left: Image Viewer & Pin */}
         <div className="w-full md:w-1/2 bg-slate-100 border-b md:border-b-0 md:border-r border-slate-200 relative overflow-hidden flex items-center justify-center min-h-[200px] md:min-h-0">
@@ -118,7 +120,7 @@ export function FeedbackDetailModal({
                   <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">CL</div>
                   <div>
                     <div className="flex items-baseline gap-2">
-                      <span className="font-semibold text-sm text-slate-900">Client</span>
+                      <span className="font-semibold text-sm text-slate-900">{t('common.client')}</span>
                       <span className="text-xs text-slate-400">
                         {formatDistanceToNow(new Date(feedback.created_at), { addSuffix: true })}
                       </span>
@@ -143,7 +145,7 @@ export function FeedbackDetailModal({
                       <div>
                         <div className="flex items-baseline gap-2">
                           <span className="font-semibold text-sm text-slate-900">
-                            {r.author_type === 'admin' ? 'Admin' : 'Client'}
+                            {r.author_type === 'admin' ? t('common.admin') : t('common.client')}
                           </span>
                           <span className="text-xs text-slate-400">
                             {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
@@ -161,7 +163,7 @@ export function FeedbackDetailModal({
                   ))
                 ) : (
                   <div className="flex justify-center">
-                    <span className="text-[10px] text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">No replies yet</span>
+                    <span className="text-[10px] text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">{t('feedbackDetail.noReplies')}</span>
                   </div>
                 )}
               </>
@@ -174,7 +176,7 @@ export function FeedbackDetailModal({
               <textarea
                 value={replyText}
                 onChange={(e) => onReplyTextChange(e.target.value)}
-                placeholder="Write a reply..."
+                placeholder={t('feedbackDetail.replyPlaceholder')}
                 aria-label="Write a reply"
                 className="w-full h-24 p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none bg-white shadow-sm mb-3"
                 onKeyDown={(e) => {
@@ -183,16 +185,16 @@ export function FeedbackDetailModal({
               />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-                  <span className="text-xs font-medium text-slate-500">Set Status:</span>
+                  <span className="text-xs font-medium text-slate-500">{t('feedbackDetail.setStatus')}</span>
                   <select
                     value={feedback.status}
                     onChange={(e) => onStatusChange(feedback.id, e.target.value as FeedbackStatus)}
                     aria-label="Set feedback status"
                     className="text-xs font-semibold text-slate-700 bg-transparent outline-none cursor-pointer"
                   >
-                    <option value="open">Open</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="resolved">Resolved</option>
+                    <option value="open">{t('common.open')}</option>
+                    <option value="in-progress">{t('common.inProgress')}</option>
+                    <option value="resolved">{t('common.resolved')}</option>
                   </select>
                 </div>
                 <button
@@ -200,7 +202,7 @@ export function FeedbackDetailModal({
                   disabled={!replyText.trim() || sending}
                   className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium rounded-lg transition-colors shadow-md disabled:opacity-50"
                 >
-                  {sending ? 'Sending...' : 'Update & Reply'}
+                  {sending ? t('feedbackDetail.sending') : t('feedbackDetail.updateReply')}
                 </button>
               </div>
             </div>

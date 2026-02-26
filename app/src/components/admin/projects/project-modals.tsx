@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
+import { useTranslation } from '@/lib/i18n/context';
 
 /* ---- Create Project Modal ---- */
 interface CreateProjectModalProps {
@@ -20,6 +21,7 @@ export function CreateProjectModal({
   creating,
   createdCreds,
 }: CreateProjectModalProps) {
+  const { t } = useTranslation();
   const [newProject, setNewProject] = useState({ name: '', slack_channel: '' });
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -35,14 +37,14 @@ export function CreateProjectModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Create Project">
+    <Modal open={open} onClose={handleClose} title={t('projects.createTitle')}>
       {createdCreds ? (
         <div className="space-y-4">
-          <p className="text-sm text-muted">Project created. Share these credentials with the client:</p>
+          <p className="text-sm text-muted">{t('projects.createdMessage')}</p>
           <div className="bg-gray-50 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted">Client ID</p>
+                <p className="text-xs text-muted">{t('projects.clientId')}</p>
                 <p className="text-sm font-mono font-medium">{createdCreds.login_id}</p>
               </div>
               <button onClick={() => copyToClipboard(createdCreds.login_id, 'id')} className="p-1.5 hover:bg-gray-200 rounded-lg" aria-label="Copy Client ID">
@@ -51,7 +53,7 @@ export function CreateProjectModal({
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted">Password</p>
+                <p className="text-xs text-muted">{t('projects.password')}</p>
                 <p className="text-sm font-mono font-medium">{createdCreds.initial_password}</p>
               </div>
               <button onClick={() => copyToClipboard(createdCreds.initial_password, 'pw')} className="p-1.5 hover:bg-gray-200 rounded-lg" aria-label="Copy password">
@@ -63,30 +65,30 @@ export function CreateProjectModal({
             onClick={handleClose}
             className="w-full py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover"
           >
-            Done
+            {t('common.done')}
           </button>
         </div>
       ) : (
         <div className="space-y-4">
           <div>
-            <label htmlFor="create-project-name" className="block text-sm font-medium mb-1.5">Project Name *</label>
+            <label htmlFor="create-project-name" className="block text-sm font-medium mb-1.5">{t('projects.projectName')}</label>
             <input
               id="create-project-name"
               type="text"
               value={newProject.name}
               onChange={(e) => setNewProject((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Acme Redesign"
+              placeholder={t('projects.projectNamePlaceholder')}
               className="w-full px-4 py-2 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
           <div>
-            <label htmlFor="create-project-slack" className="block text-sm font-medium mb-1.5">Slack Channel (optional)</label>
+            <label htmlFor="create-project-slack" className="block text-sm font-medium mb-1.5">{t('projects.slackChannel')}</label>
             <input
               id="create-project-slack"
               type="text"
               value={newProject.slack_channel}
               onChange={(e) => setNewProject((p) => ({ ...p, slack_channel: e.target.value }))}
-              placeholder="https://hooks.slack.com/services/..."
+              placeholder={t('projects.slackPlaceholder')}
               className="w-full px-4 py-2 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
@@ -95,7 +97,7 @@ export function CreateProjectModal({
             disabled={!newProject.name || creating}
             className="w-full py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
           >
-            {creating ? 'Creating...' : 'Create Project'}
+            {creating ? t('projects.creating') : t('projects.createButton')}
           </button>
         </div>
       )}
@@ -117,23 +119,24 @@ export function DeleteConfirmModal({
   onClose,
   onConfirm,
   message,
-  confirmLabel = 'Delete',
+  confirmLabel,
 }: DeleteConfirmModalProps) {
+  const { t } = useTranslation();
   return (
-    <Modal open={open} onClose={onClose} title="Delete Project" size="sm">
+    <Modal open={open} onClose={onClose} title={t('projects.deleteTitle')} size="sm">
       <p className="text-sm text-muted mb-4">{message}</p>
       <div className="flex gap-3">
         <button
           onClick={onClose}
           className="flex-1 py-2 border border-border rounded-xl text-sm font-medium hover:bg-gray-50"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           onClick={onConfirm}
           className="flex-1 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700"
         >
-          {confirmLabel}
+          {confirmLabel || t('common.delete')}
         </button>
       </div>
     </Modal>

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { LogIn, Layers, User, Lock } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -40,7 +42,7 @@ export default function LoginPage() {
 
       window.location.href = data.redirect;
     } catch {
-      setError('Network error. Please try again.');
+      setError(t('login.networkError'));
     } finally {
       setLoading(false);
     }
@@ -56,14 +58,14 @@ export default function LoginPage() {
                 <Layers className="w-7 h-7 text-white" aria-hidden="true" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold font-jakarta text-foreground">Welcome to ReviewBoard</h1>
-            <p className="text-sm text-muted mt-2">Enter your shared client credentials or admin key.</p>
+            <h1 className="text-2xl font-bold font-jakarta text-foreground">{t('login.welcome')}</h1>
+            <p className="text-sm text-muted mt-2">{t('login.subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5" aria-label="Login form">
             <div>
               <label htmlFor="id" className="block text-sm font-medium text-foreground mb-1.5">
-                Access ID
+                {t('login.accessId')}
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
@@ -72,7 +74,7 @@ export default function LoginPage() {
                   type="text"
                   value={id}
                   onChange={(e) => setId(e.target.value)}
-                  placeholder="e.g. ProjectAlpha882"
+                  placeholder={t('login.accessIdPlaceholder')}
                   autoComplete="username"
                   aria-describedby={error ? 'login-error' : undefined}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-white text-foreground placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-colors"
@@ -83,7 +85,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">
-                Password
+                {t('login.password')}
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
@@ -92,14 +94,14 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={t('login.passwordPlaceholder')}
                   autoComplete="current-password"
                   aria-describedby="password-hint"
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-white text-foreground placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-colors"
                   required
                 />
               </div>
-              <p id="password-hint" className="text-xs text-muted mt-1.5">Password is pre-set by admin invitation.</p>
+              <p id="password-hint" className="text-xs text-muted mt-1.5">{t('login.passwordHint')}</p>
             </div>
 
             {error && (
@@ -118,13 +120,13 @@ export default function LoginPage() {
               ) : (
                 <LogIn className="w-4 h-4" aria-hidden="true" />
               )}
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('login.signingIn') : t('login.signIn')}
             </button>
           </form>
 
           <div className="mt-8 pt-6 border-t border-border text-center">
             <span className="text-xs font-medium text-muted hover:text-primary transition-colors cursor-pointer">
-              Are you an Admin? Login here
+              {t('login.adminLink')}
             </span>
           </div>
         </div>

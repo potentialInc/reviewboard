@@ -4,17 +4,21 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, FolderKanban, MessageSquare, Users, LogOut, Menu, X, Layers } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
+import { LanguageToggle } from '@/components/ui/language-toggle';
+import type { TranslationKey } from '@/lib/i18n/translations';
 
 const navItems = [
-  { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/admin/projects', icon: FolderKanban, label: 'Projects' },
-  { href: '/admin/feedback', icon: MessageSquare, label: 'Feedback' },
-  { href: '/admin/team', icon: Users, label: 'Team' },
+  { href: '/admin', icon: LayoutDashboard, labelKey: 'nav.dashboard' as TranslationKey },
+  { href: '/admin/projects', icon: FolderKanban, labelKey: 'nav.projects' as TranslationKey },
+  { href: '/admin/feedback', icon: MessageSquare, labelKey: 'nav.feedback' as TranslationKey },
+  { href: '/admin/team', icon: Users, labelKey: 'nav.team' as TranslationKey },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -55,7 +59,7 @@ export function AdminSidebar() {
               }`}
             >
               <item.icon className={`w-5 h-5 transition-colors ${!isActive ? 'group-hover:text-primary' : ''}`} aria-hidden="true" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -68,13 +72,14 @@ export function AdminSidebar() {
             AD
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">Admin User</p>
+            <p className="text-sm font-medium text-white truncate">{t('nav.adminUser')}</p>
             <p className="text-xs text-slate-500 truncate">dev@reviewboard.io</p>
           </div>
+          <LanguageToggle variant="dark" />
           <button
             onClick={handleLogout}
             className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-sidebar-hover transition-colors"
-            aria-label="Logout"
+            aria-label={t('nav.logout')}
           >
             <LogOut className="w-4 h-4" />
           </button>

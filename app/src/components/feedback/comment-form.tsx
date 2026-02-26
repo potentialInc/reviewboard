@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Send, X } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface CommentFormProps {
   x: number;
@@ -11,6 +12,7 @@ interface CommentFormProps {
 }
 
 export function CommentForm({ x, y, onSubmit, onCancel }: CommentFormProps) {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,7 +34,7 @@ export function CommentForm({ x, y, onSubmit, onCancel }: CommentFormProps) {
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-foreground">Add Feedback</span>
+        <span className="text-sm font-semibold text-foreground">{t('commentForm.addFeedback')}</span>
         <button onClick={onCancel} className="p-1 rounded hover:bg-gray-100" aria-label="Cancel feedback">
           <X className="w-4 h-4 text-muted" aria-hidden="true" />
         </button>
@@ -41,7 +43,7 @@ export function CommentForm({ x, y, onSubmit, onCancel }: CommentFormProps) {
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Describe the issue or suggestion..."
+          placeholder={t('commentForm.placeholder')}
           aria-label="Feedback description"
           className="w-full px-3 py-2 rounded-lg border border-border text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           rows={3}
@@ -54,7 +56,7 @@ export function CommentForm({ x, y, onSubmit, onCancel }: CommentFormProps) {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-sm rounded-lg font-medium hover:bg-primary-hover disabled:opacity-50 transition-colors"
           >
             <Send className="w-3.5 h-3.5" />
-            {submitting ? 'Saving...' : 'Submit'}
+            {submitting ? t('commentForm.saving') : t('commentForm.submit')}
           </button>
         </div>
       </form>

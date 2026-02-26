@@ -10,7 +10,7 @@ import { loadConfig } from "../../core/config.ts";
  */
 export function checkAutoFixLoop(projectRoot: string): CheckResult[] {
   const results: CheckResult[] = [];
-  const scriptPath = resolve(projectRoot, "harness/auto-fix-loop.sh");
+  const scriptPath = resolve(projectRoot, "auto-fix-loop.sh");
 
   if (!existsSync(scriptPath)) {
     return [{

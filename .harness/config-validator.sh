@@ -14,10 +14,11 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG_FILE="${1:-$SCRIPT_DIR/harness.config.json}"
-CLI_BUNDLE="$PROJECT_ROOT/cli/dist/harness-cli.mjs"
-CLI_SRC="$PROJECT_ROOT/cli/src/index.ts"
+HARNESS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$HARNESS_ROOT/.." && pwd)"
+CONFIG_FILE="${1:-$HARNESS_ROOT/harness.config.json}"
+CLI_BUNDLE="$HARNESS_ROOT/cli/dist/harness-cli.mjs"
+CLI_SRC="$HARNESS_ROOT/cli/src/index.ts"
 
 # ── Tier 1: Built bundle (fastest, ~20ms) ──
 if [ -f "$CLI_BUNDLE" ] && command -v node &>/dev/null; then

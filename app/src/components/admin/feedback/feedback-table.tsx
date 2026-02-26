@@ -3,6 +3,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { getPinColor, getStatusTextColor, getStatusBorderColor } from '@/components/ui/badge';
 import type { FeedbackStatus, FeedbackListItem } from '@/lib/types';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface FeedbackTableProps {
   feedback: FeedbackListItem[];
@@ -19,6 +20,7 @@ export function FeedbackTable({
   onStatusChange,
   onViewDetail,
 }: FeedbackTableProps) {
+  const { t } = useTranslation();
   return (
     <table className="w-full">
       <thead>
@@ -35,12 +37,12 @@ export function FeedbackTable({
               className="rounded"
             />
           </th>
-          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Pin</th>
-          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Comment</th>
-          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Context</th>
-          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Status</th>
-          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Date</th>
-          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">Action</th>
+          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">{t('feedbackMgr.colPin')}</th>
+          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">{t('feedbackMgr.colComment')}</th>
+          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">{t('feedbackMgr.colContext')}</th>
+          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">{t('feedbackMgr.colStatus')}</th>
+          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">{t('feedbackMgr.colDate')}</th>
+          <th className="text-left px-6 py-4 text-xs font-semibold text-muted uppercase">{t('feedbackMgr.colAction')}</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-border">
@@ -84,9 +86,9 @@ export function FeedbackTable({
                   'bg-status-resolved-bg'
                 } ${getStatusTextColor(f.status)}`}
               >
-                <option value="open">Open</option>
-                <option value="in-progress">In Progress</option>
-                <option value="resolved">Resolved</option>
+                <option value="open">{t('common.open')}</option>
+                <option value="in-progress">{t('common.inProgress')}</option>
+                <option value="resolved">{t('common.resolved')}</option>
               </select>
             </td>
             <td className="px-6 py-4 text-xs text-muted">
@@ -97,7 +99,7 @@ export function FeedbackTable({
                 onClick={() => onViewDetail(f)}
                 className="text-primary hover:underline text-xs font-medium"
               >
-                View &amp; Reply
+                {t('feedbackMgr.viewReply')}
               </button>
             </td>
           </tr>

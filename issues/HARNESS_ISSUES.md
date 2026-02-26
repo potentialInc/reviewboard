@@ -550,3 +550,86 @@
   2. `.gitignore`에 `.env.deploy` 추가 (이미 `.env*` 패턴으로 포함되어 있어야 함)
   3. 배포 스크립트가 `.env.deploy`에서 읽어서 사용하도록 구현
   4. `env-manager.sh`에 배포 시크릿 카테고리 추가
+
+### HARNESS-038: Dokploy 배포 502 디버깅에 6회 빌드+배포 반복 — 원인 진단 체계 부재
+- **Status**: Open
+- **Priority**: P0
+- **Description**: Dokploy에 Docker 이미지 배포 후 502 Bad Gateway 발생. 근본 원인(validateEnv throw, standalone 경로 문제, Docker HEALTHCHECK 충돌)을 찾기까지 6회의 빌드→배포→확인 루프를 반복. 매 빌드에 ~3분 소요, 컨테이너 로그를 API로 확인할 수 없어 블라인드 디버깅. 총 ~30분 낭비.
+- **근본 원인 3가지** (모두 사전 예방 가능했음):
+  1. **`validateEnv()` 프로덕션 throw**: `layout.tsx` 모듈 스코프에서 환경변수 누락 시 `throw new Error()`. Next.js `preloadEntriesOnStart`로 서버 시작 시 layout이 로드되어 포트 바인딩 전에 서버 크래시
+  2. **Next.js standalone 빌드 경로 불일치**: 로컬 빌드의 `outputFileTracingRoot: "/Users/jis"` → standalone 출력이 `.next/standalone/Documents/Potentialai/...` 중첩 경로에 생성. Docker 내부에서는 다른 경로가 되지만, 안전하게 `next start` 방식이 더 안정적
+  3. **Docker HEALTHCHECK ↔ health endpoint 503 루프**: health endpoint가 DB 미연결 시 503 → Docker가 컨테이너를 unhealthy로 판정 → 재시작 → 무한 루프
+- **시행착오 타임라인**:
+  1. 첫 배포: 502 → standalone `server.js` 문제 의심
+  2. health endpoint 200 고정: 여전히 502 → validateEnv throw가 진짜 원인
+  3. validateEnv throw 제거: 여전히 502 → standalone 경로 문제 의심
+  4. nixpacks 전환: 빌드 실패 → dockerfile로 복원
+  5. `next start` 방식 변경: 여전히 502 → HEALTHCHECK이 재시작 루프 유발
+  6. HEALTHCHECK NONE: **성공** — 서버 정상 작동 확인
+- **하네스 개선안**:
+  1. **배포 전 로컬 Docker 테스트 필수화**: `docker build && docker run` → `curl health` 자동화 스크립트 추가. Dokploy에 올리기 전에 로컬에서 먼저 검증
+  2. **Dockerfile 린터**: `validateEnv()` 같은 모듈 스코프 throw 패턴 감지. 프로덕션 Docker 빌드에서 `throw new Error`가 startup path에 있으면 경고
+  3. **health endpoint 규칙**: Docker HEALTHCHECK용 health endpoint는 반드시 200 반환. 의존성 상태는 body에 포함 (degraded 패턴)
+  4. **standalone vs next start 가이드**: `deploy-manager.sh`에서 Next.js 프로젝트 감지 시 standalone 대신 `next start` 방식 기본 생성 (standalone은 `outputFileTracingRoot` 이슈 있음)
+  5. **배포 디버깅 runbook**: 502/503 → 체크리스트 (1) 로컬 Docker 테스트 (2) HEALTHCHECK 비활성화 테스트 (3) CMD에 디버그 로그 추가 (4) env var 존재 확인
+
+### HARNESS-039: Dokploy API 엔드포인트 탐색에 과도한 시간 소비 — PaaS 통합 가이드 필요
+- **Status**: Open
+- **Priority**: P1
+- **Description**: Dokploy API 로그인 방식(better-auth), tRPC 프로시저 이름(`gitProvider.getAll`, `github.getGithubRepositories`), 쿼리 파라미터 포맷(`?input=` URL-encoded JSON) 등을 알아내기 위해 10회 이상의 시행착오 API 호출 필요. Dokploy 소스 코드를 GitHub에서 직접 읽어야 했음.
+- **근본 원인**: PaaS 플랫폼별 API 규격 지식이 하네스에 없음. `deploy-manager.sh`가 Dokploy를 지원하지 않음.
+- **하네스 개선안**:
+  1. `deploy-manager.sh`에 Dokploy 지원 추가: 로그인, 프로젝트 생성, 앱 생성, 환경변수 설정, 배포 트리거, 헬스체크까지 원스톱
+  2. `.harness/integrations/dokploy.sh` — Dokploy API wrapper 스크립트 (login, create-project, create-app, set-env, deploy, status, logs)
+  3. PaaS 통합 가이드 문서: Dokploy, Vercel, Railway, Fly.io 각각의 API 인증 방식, 필수 엔드포인트 목록
+  4. `.env.deploy`에서 PaaS 타입 자동 감지하여 적절한 통합 스크립트 선택
+
+### HARNESS-040: Docker 컨테이너 로그를 API로 확인 불가 — 블라인드 디버깅 강제
+- **Status**: Open
+- **Priority**: P1
+- **Description**: Dokploy tRPC API에 컨테이너 런타임 로그 조회 엔드포인트가 없음 (빌드 로그는 logPath로 존재하지만 런타임 stdout/stderr는 API로 접근 불가). 502 디버깅 시 "왜 서버가 안 뜨는지" 로그를 볼 수 없어서, CMD에 `echo`로 디버그 출력을 추가하고 매번 재빌드+배포해야 했음 (~3분/회).
+- **하네스 개선안**:
+  1. 배포 후 자동으로 30초간 헬스체크 폴링. 실패 시 즉시 "Dokploy 웹 UI에서 컨테이너 로그 확인" 안내 + URL 제공
+  2. `deploy-manager.sh`에 `--wait-healthy` 옵션: 배포 후 health endpoint 응답까지 대기, 타임아웃 시 디버그 가이드 출력
+  3. Dockerfile CMD에 기본 startup 로그를 항상 포함 (env var 존재 여부, 파일 구조 확인). 프로덕션에서도 초기 1회 출력은 유지
+  4. SSH/Docker exec 기반 원격 로그 조회 자동화 (서버 SSH 키가 `.env.deploy`에 있는 경우)
+
+### HARNESS-041: `NEXT_PUBLIC_*` 빌드타임 인라인 vs 런타임 주입 혼동 — Next.js 배포 체크리스트 필요
+- **Status**: Open
+- **Priority**: P1
+- **Description**: Next.js의 `NEXT_PUBLIC_*` 환경변수는 빌드타임에 클라이언트 코드에 인라인됨. Dockerfile에서 빌드 ARG로 전달하지 않으면 클라이언트에서 `undefined`. 런타임 env로만 설정하면 서버사이드에서는 동작하지만 클라이언트에서는 누락. 이 차이를 모르고 런타임 env만 설정하여 디버깅 시간 소모.
+- **하네스 개선안**:
+  1. `deploy-manager.sh`가 Next.js 감지 시 `NEXT_PUBLIC_*` 변수를 자동으로 Dockerfile ARG + ENV 양쪽에 설정
+  2. Dockerfile 생성 시 `NEXT_PUBLIC_*` 빌드타임 주입 주석 자동 추가
+  3. `.env.local`에서 `NEXT_PUBLIC_*` 변수를 파싱하여 Docker build args 자동 생성하는 스크립트
+  4. 배포 전 체크: "NEXT_PUBLIC_ 변수 N개가 빌드 ARG로 전달되어야 합니다" 안내
+
+### HARNESS-042: GitHub Push Protection 시크릿 노출 — 보안 감사 리포트에 실제 토큰 포함
+- **Status**: Open
+- **Priority**: P0
+- **Description**: security-agent가 `issues/SECURITY_AUDIT.md`에 실제 Slack API 토큰(`xoxb-...`)을 그대로 기록. GitHub Push Protection이 push를 차단하여 발견됨. 시크릿이 git history에 남아서 `git reset --soft HEAD~2 && git commit`으로 히스토리를 squash해야 했음.
+- **근본 원인**: security-agent가 "발견한 시크릿을 리포트에 기록"하면서 시크릿 자체를 마스킹하지 않음. 리포트가 git에 커밋되면 시크릿 유출.
+- **하네스 개선안**:
+  1. security-agent 프롬프트에 "발견한 시크릿은 반드시 마스킹(`xoxb-***REDACTED***`)하여 기록" 규칙 추가
+  2. `pre-edit-security-check.sh` 훅이 시크릿 패턴(`xoxb-`, `sk-`, `ghp_`, `-----BEGIN`) 감지 시 편집 차단
+  3. `git add` 전 자동 시크릿 스캔 — pre-commit 훅에 `grep -rn 'xoxb-\|sk-live\|ghp_\|PRIVATE KEY' --include='*.md'` 추가
+  4. security-agent 출력 포맷에 `redacted: true` 필드 추가, 리포트 생성 시 자동 마스킹 적용
+
+### HARNESS-043: PRD Audit Agent 부재 — PRD ↔ 구현 갭을 수동 분석해야 함
+- **Status**: Open
+- **Priority**: P1
+- **Description**: PRD에 정의된 기능이 구현되지 않았거나, 구현에 있지만 PRD에 없는 기능을 자동 감지할 에이전트가 없음. `/admin/team` 페이지처럼 사이드바에 링크는 있지만 실제 페이지가 없는 케이스를 수동으로 발견해야 했음. 기존 에이전트(reviewer, design-qa, test-writer) 어느 것도 이 역할을 수행하지 않음.
+- **필요 기능** (`agents/prd-audit.md`):
+  1. PRD Section 9 (UI Specs) ↔ 실제 라우트(`page.tsx`) 매칭
+  2. PRD Section 8 (API Endpoints) ↔ 실제 API 라우트(`route.ts`) 매칭
+  3. PRD Section 10 (Acceptance Criteria) ↔ 구현 상태 검증
+  4. **역방향 감지**: 코드에 있지만 PRD에 정의되지 않은 기능 탐지
+  5. 네비게이션 링크 ↔ 실제 페이지 존재 여부 크로스체크
+- **Output**: `gap-report.md` (갭 목록 + 심각도 + 권장 조치)
+- **Trigger**: `audit:` 키워드 또는 pipeline qa 단계에서 자동 실행
+- **Action**:
+  1. `agents/prd-audit.md` 에이전트 정의 파일 작성
+  2. `agent-manifest.json`에 등록 (domain: qa, roles: prd-auditor)
+  3. `pipeline-runner.sh` phase 9(qa)에서 자동 실행하도록 연결
+  4. `fullstack-runner.sh` VERIFY 단계에 포함
+  5. PRD 변경 또는 라우트 파일 변경 시 post-edit 훅에서 트리거

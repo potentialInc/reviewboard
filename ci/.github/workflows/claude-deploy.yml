@@ -1,0 +1,92 @@
+name: Claude Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect deployment target
+        id: detect
+        run: |
+          TARGET="unknown"
+
+          if [ -f "vercel.json" ]; then
+            TARGET="vercel"
+          elif [ -f "fly.toml" ]; then
+            TARGET="fly"
+          elif [ -f "Dockerfile" ]; then
+            TARGET="docker"
+          elif [ -f "serverless.yml" ]; then
+            TARGET="serverless"
+          fi
+
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "Detected deployment target: $TARGET"
+
+      - name: Deploy to Vercel
+        if: steps.detect.outputs.target == 'vercel'
+        run: |
+          npm install -g vercel
+          vercel --prod --token "$VERCEL_TOKEN" --yes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy to Fly.io
+        if: steps.detect.outputs.target == 'fly'
+        run: |
+          curl -L https://fly.io/install.sh | sh
+          export PATH="$HOME/.fly/bin:$PATH"
+          flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy with Docker
+        if: steps.detect.outputs.target == 'docker'
+        run: |
+          echo "Docker deployment detected."
+          echo "Building image..."
+          docker build -t app:latest .
+          echo "Image built successfully. Push to your container registry as needed."
+
+      - name: Deploy with Serverless Framework
+        if: steps.detect.outputs.target == 'serverless'
+        run: |
+          npm install -g serverless
+          serverless deploy --stage production
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Claude deployment guidance (no config found)
+        if: steps.detect.outputs.target == 'unknown'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            No deployment configuration file was found in this repository.
+            Analyzed: vercel.json, fly.toml, Dockerfile, serverless.yml - none present.
+
+            Read CLAUDE.md for project context.
+
+            Please analyze the project structure and suggest:
+            1. The most appropriate deployment platform for this project
+            2. A deployment configuration file to add
+            3. Step-by-step instructions for setting up deployment
+
+            Create the deployment config file and commit it to the repository.
+          direct_prompt: true

@@ -5,6 +5,7 @@ import { Send, MessageSquare } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/badge';
 import type { Comment } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface CommentPanelProps {
   comments: Comment[];
@@ -15,6 +16,7 @@ interface CommentPanelProps {
 }
 
 export const CommentPanel = memo(function CommentPanel({ comments, selectedPin, onSelectPin, onReply, userType }: CommentPanelProps) {
+  const { t } = useTranslation();
   const [replyText, setReplyText] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -32,8 +34,8 @@ export const CommentPanel = memo(function CommentPanel({ comments, selectedPin, 
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-6">
         <MessageSquare className="w-12 h-12 text-gray-300 mb-3" />
-        <p className="text-sm text-muted">No feedback yet</p>
-        <p className="text-xs text-muted mt-1">Click on the image to leave feedback</p>
+        <p className="text-sm text-muted">{t('commentPanel.noFeedback')}</p>
+        <p className="text-xs text-muted mt-1">{t('commentPanel.noFeedbackHint')}</p>
       </div>
     );
   }
@@ -71,7 +73,7 @@ export const CommentPanel = memo(function CommentPanel({ comments, selectedPin, 
                   {c.replies.map((r) => (
                     <div key={r.id} className="text-sm">
                       <span className={`text-xs font-medium ${r.author_type === 'admin' ? 'text-primary' : 'text-muted'}`}>
-                        {r.author_type === 'admin' ? 'Admin' : 'Client'}
+                        {r.author_type === 'admin' ? t('common.admin') : t('common.client')}
                       </span>
                       <p className="text-foreground">{r.text}</p>
                       <p className="text-xs text-muted">
@@ -91,7 +93,7 @@ export const CommentPanel = memo(function CommentPanel({ comments, selectedPin, 
                         type="text"
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
-                        placeholder={userType === 'admin' ? 'Write a reply...' : 'Add a comment...'}
+                        placeholder={userType === 'admin' ? t('commentPanel.replyPlaceholder') : t('commentPanel.commentPlaceholder')}
                         aria-label={`Reply to pin ${c.pin_number}`}
                         className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20"
                         autoFocus
@@ -116,7 +118,7 @@ export const CommentPanel = memo(function CommentPanel({ comments, selectedPin, 
                       onClick={(e) => { e.stopPropagation(); setReplyingTo(c.id); }}
                       className="text-xs text-primary hover:text-primary-hover font-medium"
                     >
-                      Reply
+                      {t('commentPanel.reply')}
                     </button>
                   )}
                 </div>

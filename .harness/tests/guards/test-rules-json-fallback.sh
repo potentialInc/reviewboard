@@ -4,6 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOOK="$SCRIPT_DIR/hooks/pre-edit-arch-check.sh"
 RULES_FILE="$SCRIPT_DIR/architecture/rules.json"
 
@@ -56,7 +57,7 @@ fi
 echo "  Testing: corrupt rules.json → README.md should still be allowed..."
 echo '{ "version": "broken"' > "$RULES_FILE"
 
-"$HOOK" "$SCRIPT_DIR/README.md" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
+"$HOOK" "$REPO_ROOT/README.md" >/dev/null 2>&1 && EXIT_CODE=$? || EXIT_CODE=$?
 if [ "$EXIT_CODE" -eq 0 ]; then
   echo "  [PASS] README.md allowed with corrupt rules.json (exit 0)"
 else

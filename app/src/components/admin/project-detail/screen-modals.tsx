@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Upload } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import type { ScreenItem } from '@/lib/types';
+import { useTranslation } from '@/lib/i18n/context';
 
 /* ---- Add Screen Modal ---- */
 interface AddScreenModalProps {
@@ -14,6 +15,7 @@ interface AddScreenModalProps {
 }
 
 export function AddScreenModal({ open, onClose, onAdd }: AddScreenModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
 
   const handleAdd = () => {
@@ -27,16 +29,16 @@ export function AddScreenModal({ open, onClose, onAdd }: AddScreenModalProps) {
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Add Screen" size="sm">
+    <Modal open={open} onClose={handleClose} title={t('projectDetail.addScreenTitle')} size="sm">
       <div className="space-y-4">
         <div>
-          <label htmlFor="screen-name" className="block text-sm font-medium mb-1.5">Screen Name</label>
+          <label htmlFor="screen-name" className="block text-sm font-medium mb-1.5">{t('projectDetail.screenName')}</label>
           <input
             id="screen-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Login Page"
+            placeholder={t('projectDetail.screenNamePlaceholder')}
             className="w-full px-4 py-2 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             autoFocus
           />
@@ -46,7 +48,7 @@ export function AddScreenModal({ open, onClose, onAdd }: AddScreenModalProps) {
           disabled={!name}
           className="w-full py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
         >
-          Add Screen
+          {t('projectDetail.addScreen')}
         </button>
       </div>
     </Modal>
@@ -62,10 +64,11 @@ interface UploadScreenshotModalProps {
 }
 
 export function UploadScreenshotModal({ open, onClose, onUpload, uploading }: UploadScreenshotModalProps) {
+  const { t } = useTranslation();
   const [dragging, setDragging] = useState(false);
 
   return (
-    <Modal open={open} onClose={() => { onClose(); setDragging(false); }} title="Upload Screenshot" size="sm">
+    <Modal open={open} onClose={() => { onClose(); setDragging(false); }} title={t('projectDetail.uploadTitle')} size="sm">
       <div className="space-y-4">
         <div
           className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
@@ -84,7 +87,7 @@ export function UploadScreenshotModal({ open, onClose, onUpload, uploading }: Up
         >
           <Upload className="w-8 h-8 text-muted mx-auto mb-2" aria-hidden="true" />
           <p className="text-sm text-muted mb-3">
-            {dragging ? 'Drop image here' : 'Drag & drop or click to select'}
+            {dragging ? t('projectDetail.dropHere') : t('projectDetail.dragDrop')}
           </p>
           <input
             type="file"
@@ -100,7 +103,7 @@ export function UploadScreenshotModal({ open, onClose, onUpload, uploading }: Up
         {uploading && (
           <div className="flex items-center gap-2 text-sm text-muted">
             <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            Uploading...
+            {t('projectDetail.uploading')}
           </div>
         )}
       </div>
@@ -116,18 +119,19 @@ interface DeleteScreenModalProps {
 }
 
 export function DeleteScreenModal({ open, onClose, onConfirm }: DeleteScreenModalProps) {
+  const { t } = useTranslation();
   return (
-    <Modal open={open} onClose={onClose} title="Delete Screen" size="sm">
-      <p className="text-sm text-muted mb-4">This will delete the screen and all its screenshots and feedback.</p>
+    <Modal open={open} onClose={onClose} title={t('projectDetail.deleteScreenTitle')} size="sm">
+      <p className="text-sm text-muted mb-4">{t('projectDetail.deleteScreenConfirm')}</p>
       <div className="flex gap-3">
         <button onClick={onClose} className="flex-1 py-2 border border-border rounded-xl text-sm font-medium hover:bg-gray-50">
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           onClick={onConfirm}
           className="flex-1 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700"
         >
-          Delete
+          {t('common.delete')}
         </button>
       </div>
     </Modal>
@@ -141,8 +145,9 @@ interface VersionHistoryModalProps {
 }
 
 export function VersionHistoryModal({ screen, onClose }: VersionHistoryModalProps) {
+  const { t } = useTranslation();
   return (
-    <Modal open={!!screen} onClose={onClose} title={`Version History — ${screen?.name}`}>
+    <Modal open={!!screen} onClose={onClose} title={`${t('projectDetail.versionHistory')} — ${screen?.name}`}>
       <div className="grid grid-cols-2 gap-4">
         {screen?.screenshot_versions
           .sort((a, b) => b.version - a.version)

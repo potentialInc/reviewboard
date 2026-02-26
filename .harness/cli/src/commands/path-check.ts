@@ -1,18 +1,23 @@
 import { resolve } from "node:path";
 import { computeRelativePath, isProtectedPath } from "../core/paths.ts";
 import { loadRules } from "../core/rules.ts";
+import { findRepoRoot } from "../utils/fs.ts";
 
 const LAYERS = ["types", "config", "repo", "service", "runtime", "ui"];
 
 /**
  * Check if a file path is protected and report layer context.
  * Exit codes: 0 = allowed, 2 = blocked.
+ *
+ * Uses the git repo root for relative path computation so that
+ * .harness/, .claude/, and CLAUDE.md are all protected correctly.
  */
 export function pathCheck(projectRoot: string, filePath: string): number {
   const rules = loadRules(projectRoot);
-  // Resolve relative paths against the project root (not CWD)
-  const absolutePath = filePath.startsWith("/") ? filePath : resolve(projectRoot, filePath);
-  const relPath = computeRelativePath(absolutePath, projectRoot);
+  const repoRoot = findRepoRoot(projectRoot);
+  // Resolve relative paths against the repo root (not harness root)
+  const absolutePath = filePath.startsWith("/") ? filePath : resolve(repoRoot, filePath);
+  const relPath = computeRelativePath(absolutePath, repoRoot);
   const result = isProtectedPath(relPath, rules);
 
   if (result.blocked) {

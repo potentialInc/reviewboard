@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { LogOut, Layers } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
+import { LanguageToggle } from '@/components/ui/language-toggle';
 
 export function ClientNavbar() {
+  const { t } = useTranslation();
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
@@ -18,14 +21,15 @@ export function ClientNavbar() {
         <span className="font-jakarta text-lg font-bold text-foreground tracking-tight">ReviewBoard</span>
       </Link>
       <div className="flex items-center gap-4">
-        <span className="text-sm text-muted font-medium hidden sm:block">Client Mode</span>
+        <span className="text-sm text-muted font-medium hidden sm:block">{t('nav.clientMode')}</span>
+        <LanguageToggle />
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 text-sm font-medium text-muted hover:text-red-600 transition-colors"
           aria-label="Logout"
         >
           <LogOut className="w-4 h-4" />
-          Logout
+          {t('nav.logout')}
         </button>
       </div>
     </nav>

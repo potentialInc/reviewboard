@@ -1,0 +1,54 @@
+name: Claude Issue Solver
+
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  solve:
+    # Only run when issue has 'claude' label or repo collaborator comment mentions @claude
+    if: |
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'claude')) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
+       github.event.comment.author_association != 'NONE' &&
+       github.event.comment.author_association != 'FIRST_TIMER' &&
+       github.event.comment.author_association != 'FIRST_TIME_CONTRIBUTOR')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "Claude Agent"
+          git config user.email "claude-agent@users.noreply.github.com"
+
+      - name: Claude Issue Solver
+        timeout-minutes: 30
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are a feature-builder agent. Read CLAUDE.md and agents/feature-builder.md for context.
+
+            Analyze this issue and implement a solution:
+            - Create a new branch: agent/issue-${{ github.event.issue.number }}
+            - Implement the fix or feature described in the issue
+            - Follow architecture rules in architecture/ARCHITECTURE.md
+            - Write tests for all new public functions
+            - Run ./architecture/enforce.sh to validate
+            - Commit changes with descriptive messages
+            - Create a PR linking to this issue
+
+            Issue title: ${{ github.event.issue.title }}
+            Issue body: ${{ github.event.issue.body }}
+          direct_prompt: true
