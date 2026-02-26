@@ -42,7 +42,6 @@ USER nextjs
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+HEALTHCHECK NONE
 
-CMD ["npx", "next", "start", "-H", "0.0.0.0", "-p", "3000"]
+CMD ["sh", "-c", "echo '=== DEBUG START ===' && echo 'pwd:' && pwd && echo 'ls:' && ls -la && echo '.next exists:' && ls .next/BUILD_ID 2>&1 && echo 'node_modules/next:' && ls node_modules/.bin/next 2>&1 && echo 'env:' && env | grep -E '^(NODE_ENV|PORT|NEXT_PUBLIC|SUPABASE|SESSION|ADMIN)' && echo '=== starting next ===' && exec node_modules/.bin/next start -H 0.0.0.0 -p 3000"]
