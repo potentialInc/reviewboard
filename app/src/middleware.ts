@@ -73,7 +73,11 @@ export async function middleware(request: NextRequest) {
   // always send an Origin header with fetch/XMLHttpRequest.
   if (pathname.startsWith('/api/') && request.method !== 'GET' && request.method !== 'HEAD') {
     const origin = request.headers.get('origin');
-    const allowed = new URL(request.url).origin;
+    // Behind a reverse proxy (Dokploy/Traefik), request.url is the internal address
+    // (e.g. http://localhost:3000). Use X-Forwarded-* headers for the real origin.
+    const proto = request.headers.get('x-forwarded-proto') || new URL(request.url).protocol.replace(':', '');
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || new URL(request.url).host;
+    const allowed = `${proto}://${host}`;
     if (!origin || origin !== allowed) {
       return NextResponse.json({ error: 'CSRF rejected' }, { status: 403 });
     }
