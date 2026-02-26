@@ -116,6 +116,9 @@ export const translations = {
     'projectDetail.deleteScreenTitle': 'Delete Screen',
     'projectDetail.deleteScreenConfirm': 'This will delete the screen and all its screenshots and feedback.',
     'projectDetail.versionHistory': 'Version History',
+    'projectDetail.viewFeedback': 'View Feedback',
+    'projectDetail.allFeedback': 'All Feedback',
+    'projectDetail.statusChange': 'Change Status',
 
     // Team (admin) — Coming Soon
     'team.title': 'Team',
@@ -336,6 +339,9 @@ export const translations = {
     'projectDetail.deleteScreenTitle': '화면 삭제',
     'projectDetail.deleteScreenConfirm': '이 화면과 모든 스크린샷, 피드백이 삭제됩니다.',
     'projectDetail.versionHistory': '버전 기록',
+    'projectDetail.viewFeedback': '피드백 보기',
+    'projectDetail.allFeedback': '전체 피드백',
+    'projectDetail.statusChange': '상태 변경',
 
     // Team (admin) — Coming Soon
     'team.title': '팀',

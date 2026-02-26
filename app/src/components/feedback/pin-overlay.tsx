@@ -17,18 +17,20 @@ interface PinOverlayProps {
   comments: Comment[];
   selectedPin: string | null;
   onPinClick: (comment: Comment) => void;
-  onImageClick: (x: number, y: number) => void;
+  onImageClick?: (x: number, y: number) => void;
   imageUrl: string;
+  readOnly?: boolean;
 }
 
-export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPinClick, onImageClick, imageUrl }: PinOverlayProps) {
+export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPinClick, onImageClick, imageUrl, readOnly }: PinOverlayProps) {
   const { t } = useTranslation();
   const transformRef = useRef<ReactZoomPanPinchRef>(null);
   const [scale, setScale] = useState(1);
   const [pinMode, setPinMode] = useState(false);
 
-  // Toggle pin mode with C key
+  // Toggle pin mode with C key (disabled in readOnly mode)
   useEffect(() => {
+    if (readOnly) return;
     function handleKeyDown(e: KeyboardEvent) {
       if (e.code === 'KeyC' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
         // Don't toggle if user is typing in an input/textarea
@@ -39,16 +41,16 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [readOnly]);
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!pinMode) return;
+    if (!pinMode || readOnly || !onImageClick) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     onImageClick(x, y);
-  }, [onImageClick, pinMode]);
+  }, [onImageClick, pinMode, readOnly]);
 
   return (
     <div className="relative">
@@ -103,21 +105,24 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
 
       {/* Toolbar */}
       <div className="absolute bottom-4 left-4 flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-border p-1 z-20">
-        {/* Mode toggle */}
-        <button
-          onClick={() => setPinMode(prev => !prev)}
-          className={`p-2 rounded-lg transition-colors ${
-            pinMode
-              ? 'bg-primary text-white'
-              : 'hover:bg-gray-100 text-slate-600'
-          }`}
-          aria-label={pinMode ? 'Switch to pan mode' : 'Switch to pin mode'}
-          title={pinMode ? t('viewer.panModeKey') : t('viewer.pinModeKey')}
-        >
-          {pinMode ? <Crosshair className="w-4 h-4" /> : <Hand className="w-4 h-4" />}
-        </button>
-
-        <div className="w-px h-5 bg-gray-200 mx-0.5" />
+        {/* Mode toggle (hidden in readOnly) */}
+        {!readOnly && (
+          <>
+            <button
+              onClick={() => setPinMode(prev => !prev)}
+              className={`p-2 rounded-lg transition-colors ${
+                pinMode
+                  ? 'bg-primary text-white'
+                  : 'hover:bg-gray-100 text-slate-600'
+              }`}
+              aria-label={pinMode ? 'Switch to pan mode' : 'Switch to pin mode'}
+              title={pinMode ? t('viewer.panModeKey') : t('viewer.pinModeKey')}
+            >
+              {pinMode ? <Crosshair className="w-4 h-4" /> : <Hand className="w-4 h-4" />}
+            </button>
+            <div className="w-px h-5 bg-gray-200 mx-0.5" />
+          </>
+        )}
 
         {/* Zoom controls */}
         <button
@@ -154,17 +159,19 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
         </button>
       </div>
 
-      {/* Mode indicator */}
-      {pinMode ? (
-        <div className="absolute top-4 left-4 bg-primary text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg z-20 animate-fade-in flex items-center gap-1.5">
-          <Crosshair className="w-3 h-3" />
-          {t('viewer.pinModeHint')}
-        </div>
-      ) : (
-        <div className="absolute top-4 left-4 bg-slate-700 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg z-20 animate-fade-in flex items-center gap-1.5">
-          <Hand className="w-3 h-3" />
-          {t('viewer.panModeHint')}
-        </div>
+      {/* Mode indicator (hidden in readOnly) */}
+      {!readOnly && (
+        pinMode ? (
+          <div className="absolute top-4 left-4 bg-primary text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg z-20 animate-fade-in flex items-center gap-1.5">
+            <Crosshair className="w-3 h-3" />
+            {t('viewer.pinModeHint')}
+          </div>
+        ) : (
+          <div className="absolute top-4 left-4 bg-slate-700 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg z-20 animate-fade-in flex items-center gap-1.5">
+            <Hand className="w-3 h-3" />
+            {t('viewer.panModeHint')}
+          </div>
+        )
       )}
     </div>
   );

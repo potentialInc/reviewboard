@@ -231,6 +231,7 @@ export default function AdminProjectDetailPage() {
             <ScreenCard
               key={s.id}
               screen={s}
+              projectId={id}
               onUpload={setShowUpload}
               onHistory={setShowHistory}
               onDelete={setShowDeleteScreen}

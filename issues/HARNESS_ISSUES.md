@@ -716,6 +716,24 @@
   3. `templates/auth/supabase-auth.md`에 "service role client는 반드시 싱글턴" 패턴 명시
   4. `config.toml`의 `[db.pooler] enabled = false`를 로컬 개발용임을 명시하는 주석 추가 (Cloud Supabase는 자체 pooler 사용)
 
+### HARNESS-049: QA 테스트 자동화 — 빌드 완료 후 자동 실행 필요
+- **Status**: Open
+- **Priority**: P1
+- **Description**: 현재 QA 테스트(admin-user-flow, client-user-flow 등 350개 테스트)가 수동 프롬프트로만 실행됨. 빌드가 끝날 때마다 자동으로 QA 테스트를 실행하는 파이프라인이 없어, 회귀 버그가 감지되지 않고 배포될 위험이 있음.
+- **근본 원인**: `.harness/` 파이프라인에 빌드 후 테스트 자동 실행 단계가 미정의. `fullstack-runner.sh`와 `pipeline-runner.sh` 모두 빌드 성공만 확인하고 `vitest run`을 트리거하지 않음.
+- **영향 범위**: 전체 프로젝트 — 소스 코드 변경 시 기존 테스트가 깨져도 수동 실행 전까지 발견 불가. 실제로 env.test.ts, health-route.test.ts, supabase-server.test.ts에서 4건의 회귀 실패가 수동 실행 전까지 미발견됨.
+- **해결안**:
+  1. `.harness/hooks/post-build.sh`에 `cd app && npx vitest run` 단계 추가
+  2. `pipeline-runner.sh`의 빌드 완료 후 단계에 테스트 실행 게이트 추가 (실패 시 파이프라인 중단)
+  3. `fullstack-runner.sh`에서 프론트엔드 빌드 성공 후 자동 테스트 실행
+  4. 테스트 실패 시 자동 알림 (Slack 연동 or 콘솔 하이라이트)
+- **하네스 개선안**:
+  1. `harness.config.json`에 `"postBuildTest": true` 플래그 추가 — 빌드 후 테스트 자동 실행 여부 제어
+  2. `auto-fix-loop.sh`가 코드 수정 후 관련 테스트만 선별 실행하는 `--affected` 모드 추가
+  3. `.harness/orchestration/` 모든 모드에 테스트 게이트 단계를 표준 포함
+  4. 테스트 커버리지 리포트를 `.harness/memory/`에 저장하여 회귀 추적 가능하게
+  5. pre-commit 훅에 변경된 파일 관련 테스트 자동 실행 (`vitest related`)
+
 ### HARNESS-046: CSRF rejected — 리버스 프록시 뒤에서 Origin 불일치
 - **Status**: Resolved
 - **Priority**: P0
@@ -727,3 +745,31 @@
   2. `request.url` 직접 사용 금지 규칙 → `X-Forwarded-*` 헤더 우선 사용 패턴 강제
   3. 배포 후 자동 스모크 테스트에 POST 요청 포함 (GET 200만으로 "정상" 판단하지 않기)
   4. middleware 테스트에 `X-Forwarded-Proto: https` + `X-Forwarded-Host: domain.com` 시나리오 필수 포함
+
+### HARNESS-050: `.harness/` 내부 폴더가 프로젝트 루트에 중복 생성 — 루트 디렉토리 오염
+- **Status**: Open
+- **Priority**: P1
+- **Description**: `.harness/` 내부에 있어야 할 13개 디렉토리와 2개 파일이 프로젝트 루트에 동일하게 중복 존재. `diff`로 확인한 결과 내용이 100% 동일. 루트에 34개 항목이 나열되어 프로젝트 구조가 지저분하고, 실제 프로젝트 코드(`app/`, `mockups/`, `issues/`)와 하네스 도구 파일이 혼재되어 구분 불가.
+- **중복 목록**:
+  - 디렉토리 (13개): `agents/`, `architecture/`, `ci/`, `cli/`, `hooks/`, `mcp/`, `memory/`, `orchestration/`, `prd/`, `scripts/`, `skills/`, `templates/`, `tests/`
+  - 파일 (2개): `harness.config.json`, `mcp.json`
+  - 부분 중복: `harness/` (`.harness/`의 셸 스크립트만 포함된 구버전 디렉토리)
+  - 기타: `SCREEN_STATUS.md` (HARNESS-006에서 이미 지적된 루트 생성 파일)
+- **근본 원인**: 3단계에 걸쳐 발생.
+  1. `c258d33`(초기 풀스택 셋업): 하네스 파일이 루트에 직접 생성됨 (`.harness/` 미존재)
+  2. `3884096`(인프라 추가): `agents/ → .harness/agents/` 등 rename으로 `.harness/`로 정상 이동. 루트 원본 삭제됨
+  3. `27d2b85`(하네스 업데이트): "harness improvements" 커밋에서 `.harness/` 내부 파일 203개가 **루트에 다시 복사 생성**. 265개 파일 변경의 대규모 커밋이라 중복 생성이 리뷰에서 걸러지지 않음. 하네스 업데이트 스크립트가 `.harness/` 대신 루트 경로에 파일을 풀어놓은 것이 직접 원인.
+- **영향**:
+  - 루트 `ls`에 34개 항목 → 실제 프로젝트 폴더(`app/`, `mockups/`) 식별 어려움
+  - 에이전트가 루트 `agents/`와 `.harness/agents/` 중 어느 것을 참조해야 하는지 모호
+  - git 저장소 크기 불필요 증가 (중복 파일 추적)
+  - 새 팀원 합류 시 프로젝트 구조 파악 혼란
+- **해결안**:
+  1. 루트의 중복 13개 디렉토리 + 2개 파일 + `harness/` 디렉토리 삭제
+  2. `SCREEN_STATUS.md`를 `docs/`로 이동하거나 삭제
+  3. 삭제 후 `.harness/` 참조 경로가 모두 정상 동작하는지 검증 (`run-tests.sh all`)
+- **하네스 개선안**:
+  1. `project-init.sh`가 하네스 파일을 반드시 `.harness/` 안에만 생성하도록 경로 강제
+  2. session-start 훅에서 루트에 하네스 디렉토리(`agents/`, `hooks/` 등)가 존재하면 경고 + 자동 정리 제안
+  3. `.harness/tests/guards/`에 "루트 디렉토리 청결도" 테스트 추가 — 프로젝트 코드가 아닌 파일이 루트에 존재하면 실패
+  4. `architecture/rules.json`에 루트 허용 파일 화이트리스트 정의 (`app/`, `mockups/`, `issues/`, `docs/`, `CLAUDE.md`, `docker-compose*.yml`)
