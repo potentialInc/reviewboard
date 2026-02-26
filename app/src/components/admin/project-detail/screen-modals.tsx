@@ -224,7 +224,7 @@ export function VersionHistoryModal({ screen, onClose }: VersionHistoryModalProp
           .sort((a, b) => b.version - a.version)
           .map((v) => (
             <div key={v.id} className="border border-border rounded-xl overflow-hidden">
-              <Image src={v.image_url} alt={`v${v.version}`} width={640} height={360} sizes="50vw" className="w-full aspect-video object-cover" />
+              <Image src={v.image_url} alt={`v${v.version}`} width={640} height={360} sizes="50vw" className="w-full aspect-video object-cover" unoptimized />
               <div className="p-2 flex items-center justify-between">
                 <span className="text-sm font-medium">v{v.version}</span>
                 <span className="text-xs text-muted">{new Date(v.created_at).toLocaleDateString()}</span>

@@ -37,6 +37,7 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
         className="w-full h-auto block"
         draggable={false}
         priority
+        unoptimized
       />
       {comments.map((c) => (
         <button

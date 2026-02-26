@@ -18,7 +18,7 @@ export function ScreenCard({ screen, onUpload, onDelete }: ScreenCardProps) {
     <div className="group bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all">
       <div className="aspect-[9/16] bg-slate-100 relative">
         {screen.latest_version ? (
-          <Image src={screen.latest_version.image_url} alt={screen.name} width={360} height={640} sizes="(max-width: 768px) 100vw, 25vw" className="w-full h-full object-cover" />
+          <Image src={screen.latest_version.image_url} alt={screen.name} width={360} height={640} sizes="(max-width: 768px) 100vw, 25vw" className="w-full h-full object-cover" unoptimized />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">
             <Monitor className="w-10 h-10" aria-hidden="true" />

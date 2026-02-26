@@ -68,6 +68,7 @@ export function FeedbackDetailModal({
                   height={711}
                   sizes="400px"
                   className="w-[320px] h-auto block opacity-95"
+                  unoptimized
                 />
                 <div
                   className={`absolute w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold z-20 animate-bounce ${getPinColor(feedback.status)}`}
