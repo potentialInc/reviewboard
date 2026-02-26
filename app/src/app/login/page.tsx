@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { LogIn, Layers, User, Lock } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
+import { LanguageToggle } from '@/components/ui/language-toggle';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -123,12 +124,10 @@ export default function LoginPage() {
               {loading ? t('login.signingIn') : t('login.signIn')}
             </button>
           </form>
+        </div>
 
-          <div className="mt-8 pt-6 border-t border-border text-center">
-            <span className="text-xs font-medium text-muted hover:text-primary transition-colors cursor-pointer">
-              {t('login.adminLink')}
-            </span>
-          </div>
+        <div className="flex justify-center mt-4">
+          <LanguageToggle />
         </div>
       </div>
     </main>

@@ -633,3 +633,67 @@
   3. `pipeline-runner.sh` phase 9(qa)에서 자동 실행하도록 연결
   4. `fullstack-runner.sh` VERIFY 단계에 포함
   5. PRD 변경 또는 라우트 파일 변경 시 post-edit 훅에서 트리거
+
+### HARNESS-044b: Docker Swarm HEALTHCHECK 롤백 — 환경변수 변경이 반영 안 되는 사일런트 실패
+- **Status**: Resolved
+- **Priority**: P0
+- **Description**: Dokploy(Docker Swarm) 배포 시 Dockerfile에 `HEALTHCHECK CMD wget ...`을 추가하면, 새 컨테이너의 health check가 start-period(15초) 내에 통과하지 못해 Swarm이 **자동으로 이전 컨테이너로 롤백**. 이 과정이 완전히 사일런트 — 빌드 status는 "done", 앱은 응답하지만 **이전 환경변수(로컬 Supabase URL)를 가진 이전 컨테이너가 서비스됨**. Supabase Cloud URL로 env를 변경하고 3번 배포했지만 매번 이전 컨테이너로 롤백되어 `database: error`가 지속. uptime이 계속 증가하는 것으로 롤백을 감지.
+- **근본 원인**:
+  1. Next.js 16 cold start가 15초 이상 소요 → HEALTHCHECK start-period=15s 부족
+  2. Alpine `wget -qO-`가 응답 본문을 출력하려다 실패하는 경우 있음
+  3. Docker Swarm 롤백이 deployment status에 반영되지 않음 (status=done인데 실제론 롤백)
+- **해결**: `HEALTHCHECK NONE`으로 되돌려서 새 컨테이너 채택 → Cloud Supabase 연결 성공
+- **하네스 개선안**:
+  1. `deploy-manager.sh`에 배포 후 uptime 체크: 배포 전 uptime 기록 → 배포 후 uptime이 리셋되지 않으면 "롤백 감지" 경고
+  2. Dockerfile HEALTHCHECK 설정 시 Next.js 앱은 `start-period=60s` 이상 권장
+  3. HEALTHCHECK CMD는 `wget --spider` (HEAD 요청) 또는 `node -e "http.get(...)"`처럼 확실한 방법 사용
+  4. Swarm 배포 후 `docker service ls`로 replicas 상태 확인 자동화
+  5. 환경변수 변경 배포 시 반드시 uptime 리셋 확인 → 안 되면 즉시 "HEALTHCHECK 롤백 의심" 안내
+
+### HARNESS-045: Supabase Cloud DB 직접 연결 불가 — CLI 마이그레이션 차단
+- **Status**: Resolved (우회)
+- **Priority**: P1
+- **Description**: Supabase Cloud 프로젝트(`dkilhzlubhojbgrexzvv`)에 `supabase db push`로 마이그레이션을 시도했으나, 직접 연결(`db.*.supabase.co:5432`)은 IPv6 only로 "no route to host", 풀러(`aws-0-*.pooler.supabase.com:6543`)는 모든 리전에서 "Tenant or user not found". Supabase CLI 로그인도 non-TTY 환경에서 불가.
+- **해결**: 마이그레이션 SQL 11개 파일을 합쳐서 클립보드에 복사 → 사용자가 Supabase SQL Editor에 붙여넣기 실행
+- **하네스 개선안**:
+  1. `deploy-manager.sh`에 Supabase Cloud 마이그레이션 자동화: `supabase login --token` 방식 지원
+  2. CLI 로그인 불가 시 자동으로 SQL 합치기 → 클립보드 복사 → SQL Editor 안내 폴백
+  3. `.env.deploy`에 `SUPABASE_ACCESS_TOKEN` 저장하여 CLI 인증 자동화
+  4. IPv6 연결 실패 시 자동으로 풀러 → 직접 연결 → SQL Editor 순서로 폴백
+
+### HARNESS-044: PRD ↔ 목업 불일치 미감지 — "Add Screen" 스크린샷 첨부 누락
+- **Status**: Open
+- **Priority**: P0
+- **Description**: 목업(`mockups/admin-project-details.page.html:161-189`)은 "Add New Screen" 모달에 Screen Name + File Upload를 **하나의 폼**으로 통합. 그러나 PRD(`prd-reviewboard.md:105-108`)는 이름 입력(Step 7-8)과 파일 업로드(Step 9-10)를 **별도 단계**로 명세. API도 `POST /screens`(name only) + `POST /screenshots`(file only) 2개로 분리. 구현은 PRD를 충실히 따라 `AddScreenModal`(이름만) + `UploadScreenshotModal`(파일만) 2개 모달로 분리. 사용자는 목업 기준의 통합 UX를 기대.
+- **근본 원인 체인**:
+  1. 목업 → 통합 모달 / PRD → 분리 흐름 (불일치 발생 지점)
+  2. feature-builder → PRD만 읽음 → 분리 흐름 구현
+  3. test-writer → PRD AC-010(이름 생성) + AC-011(파일 업로드) 별도 → 각각 유효한 테스트 작성
+  4. design-qa → 시각적 충실도만 채점 (Layout/Colors/Typography), 모달 내 폼 필드 비교 없음
+  5. 어떤 에이전트도 PRD ↔ 목업 일관성을 검증하지 않음
+- **왜 test-writer가 못 잡았나**:
+  - `agent-manifest.json`에서 PRD Section 10(AC)만 읽음. 목업은 입력 범위 밖
+  - AC-010, AC-011이 이미 분리 → 각각 유효한 테스트 생성
+  - "코드가 PRD를 만족하는가"만 검증. "PRD가 디자인을 반영하는가"는 범위 밖
+- **왜 design-qa가 못 잡았나**:
+  - Interactions 카테고리(10%) = hover/focus/transition만 체크
+  - 모달은 기본 상태에서 숨겨져 있어 스크린샷 비교 대상 아님
+  - "Functional Completeness" 카테고리 자체가 없음
+- **하네스 개선안**:
+  1. **Reconciliation Phase 신설**: 파이프라인 Phase 2(prd) 이후 PRD ↔ 디자인 교차 검증 단계 삽입. 목업 모달/폼 인벤토리 vs PRD 인터랙션 명세 diff
+  2. **design-qa에 Functional Completeness(20%) 추가**: 목업 모달 트리거 → 구현 모달 트리거 → 내부 폼 필드 비교
+  3. **PRD 템플릿에 Design-to-PRD Cross Reference 테이블 필수화**: 각 인터랙션이 디자인의 어떤 요소에 대응하는지 명시적 기록
+  4. **prd-gate.sh에 디자인 교차 참조 검사 추가**: 디자인 자료 존재 시 Cross Reference 테이블 없으면 WARNING
+  5. **reconciler 에이전트 신설**: `agents/reconciler.md` — PRD Section 6,8,9 + 디자인 자료를 동시에 읽고 불일치 보고
+
+### HARNESS-046: CSRF rejected — 리버스 프록시 뒤에서 Origin 불일치
+- **Status**: Resolved
+- **Priority**: P0
+- **Description**: 프로덕션 배포 후 모든 POST/PUT/DELETE API 요청이 `403 CSRF rejected`로 차단됨. 프로젝트 생성, 스크린 업로드 등 모든 변경 작업 불가. 원인: `middleware.ts`의 CSRF 체크에서 `new URL(request.url).origin`이 리버스 프록시(Traefik) 뒤에서 `http://localhost:3000`을 반환. 브라우저 Origin 헤더 `https://reviewboard.potentialai.dev`와 불일치 → 정상 요청도 CSRF로 차단.
+- **근본 원인**: 로컬 개발에서는 `request.url`과 브라우저 Origin이 동일(`http://localhost:3000`)하므로 문제 없음. 리버스 프록시 배포 시에만 발생하는 환경 의존적 버그. 기존 테스트(`middleware.test.ts`)도 로컬 환경만 테스트.
+- **해결**: `X-Forwarded-Proto` + `X-Forwarded-Host` 헤더로 실제 origin 재구성
+- **하네스 개선안**:
+  1. security-agent가 CSRF/CORS 미들웨어 작성 시 "리버스 프록시 환경 체크리스트" 자동 적용
+  2. `request.url` 직접 사용 금지 규칙 → `X-Forwarded-*` 헤더 우선 사용 패턴 강제
+  3. 배포 후 자동 스모크 테스트에 POST 요청 포함 (GET 200만으로 "정상" 판단하지 않기)
+  4. middleware 테스트에 `X-Forwarded-Proto: https` + `X-Forwarded-Host: domain.com` 시나리오 필수 포함

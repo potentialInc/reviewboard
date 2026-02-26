@@ -53,17 +53,35 @@ export default function AdminProjectDetailPage() {
     fetchProject().finally(() => setLoading(false));
   }, [fetchProject]);
 
-  const handleAddScreen = async (name: string) => {
-    if (!name) return;
-    const res = await fetch(`/api/projects/${id}/screens`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    });
-    if (res.ok) {
+  const handleAddScreen = async (name: string, file: File) => {
+    if (!name || !file) return;
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/projects/${id}/screens`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) return;
+      const screen = await res.json();
+
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await fetch(`/api/projects/${id}/screens/${screen.id}/screenshots`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!uploadRes.ok) {
+        toast(t('toast.uploadFailed'), 'error');
+      }
+
       toast(t('toast.screenAdded'), 'success');
       setShowAddScreen(false);
       await fetchProject();
+    } catch {
+      toast(t('toast.networkError'), 'error');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -236,6 +254,7 @@ export default function AdminProjectDetailPage() {
         open={showAddScreen}
         onClose={() => setShowAddScreen(false)}
         onAdd={handleAddScreen}
+        creating={uploading}
       />
 
       <UploadScreenshotModal

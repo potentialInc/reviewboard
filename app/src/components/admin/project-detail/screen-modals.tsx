@@ -11,21 +11,28 @@ import { useTranslation } from '@/lib/i18n/context';
 interface AddScreenModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (name: string) => void;
+  onAdd: (name: string, file: File) => void;
+  creating: boolean;
 }
 
-export function AddScreenModal({ open, onClose, onAdd }: AddScreenModalProps) {
+export function AddScreenModal({ open, onClose, onAdd, creating }: AddScreenModalProps) {
   const { t } = useTranslation();
   const [name, setName] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   const handleAdd = () => {
-    onAdd(name);
+    if (!file) return;
+    onAdd(name, file);
     setName('');
+    setFile(null);
   };
 
   const handleClose = () => {
     onClose();
     setName('');
+    setFile(null);
+    setDragging(false);
   };
 
   return (
@@ -43,12 +50,76 @@ export function AddScreenModal({ open, onClose, onAdd }: AddScreenModalProps) {
             autoFocus
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1.5">{t('projectDetail.screenshot')}</label>
+          {file ? (
+            <div className="relative border border-border rounded-xl p-3 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{file.name}</p>
+                <p className="text-xs text-muted">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFile(null)}
+                className="text-muted hover:text-slate-700 text-sm px-2"
+                aria-label="Remove file"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <div
+              className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer ${
+                dragging ? 'border-primary bg-primary/5' : 'border-border hover:bg-slate-50'
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                const dropped = e.dataTransfer.files?.[0];
+                if (dropped && dropped.type.startsWith('image/')) {
+                  setFile(dropped);
+                }
+              }}
+            >
+              <Upload className="w-8 h-8 text-muted mx-auto mb-2" aria-hidden="true" />
+              <p className="text-sm text-muted mb-2">
+                {dragging ? t('projectDetail.dropHere') : t('projectDetail.dragDrop')}
+              </p>
+              <p className="text-xs text-muted mb-3">PNG, JPG up to 10MB</p>
+              <input
+                type="file"
+                accept="image/*"
+                aria-label="Choose screenshot image"
+                onChange={(e) => {
+                  const selected = e.target.files?.[0];
+                  if (selected) setFile(selected);
+                }}
+                className="block w-full text-sm text-muted file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary file:text-white hover:file:bg-primary-hover"
+              />
+            </div>
+          )}
+        </div>
+
+        {creating && (
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            {t('projectDetail.uploading')}
+          </div>
+        )}
+
         <button
           onClick={handleAdd}
-          disabled={!name}
+          disabled={!name || !file || creating}
           className="w-full py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
         >
-          {t('projectDetail.addScreen')}
+          {t('projectDetail.createScreen')}
         </button>
       </div>
     </Modal>
