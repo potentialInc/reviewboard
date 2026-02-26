@@ -34,7 +34,7 @@ export const PinOverlay = memo(function PinOverlay({ comments, selectedPin, onPi
         width={1920}
         height={1080}
         sizes="(max-width: 768px) 100vw, 75vw"
-        className="max-w-full max-h-[calc(100vh-12rem)] w-auto h-auto block"
+        className="max-w-full max-h-[calc(100vh-13rem)] w-auto h-auto block"
         draggable={false}
         priority
         unoptimized

@@ -212,9 +212,9 @@ export default function FeedbackViewerPage() {
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col lg:flex-row flex-1 gap-0 min-h-0 rounded-2xl border border-border overflow-hidden bg-white">
-        {/* Screenshot viewer */}
-        <div className="flex-1 overflow-auto bg-gray-50 relative flex items-start justify-center p-4">
+      <div className="relative flex-1 min-h-0 rounded-2xl border border-border overflow-hidden bg-white">
+        {/* Screenshot viewer — full width */}
+        <div className="absolute inset-0 overflow-auto bg-gray-50 flex items-start justify-center p-4">
           {currentVersion ? (
             <div className="relative">
               <PinOverlay
@@ -240,8 +240,8 @@ export default function FeedbackViewerPage() {
           )}
         </div>
 
-        {/* Comment side panel */}
-        <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-border flex flex-col">
+        {/* Comment side panel — overlay on right */}
+        <div className="absolute right-0 top-0 bottom-0 w-full lg:w-96 bg-white border-l border-border flex flex-col shadow-xl z-10">
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-800 flex items-center">
