@@ -102,7 +102,7 @@ export default function AdminDashboard() {
           <p className="text-slate-500 mt-1">{t('dashboard.subtitle')}</p>
         </div>
         <Link
-          href="/admin/projects/new"
+          href="/admin/projects?new=true"
           className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-hover"
         >
           <Plus className="w-4 h-4" />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Plus, Search, Trash2, Copy, Check, Eye } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/components/ui/toast';
@@ -13,10 +14,11 @@ import type { ProjectListItem } from '@/lib/types';
 export default function AdminProjectsPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(searchParams.get('new') === 'true');
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [createdCreds, setCreatedCreds] = useState<{ login_id: string; initial_password: string } | null>(null);
   const [creating, setCreating] = useState(false);
